@@ -108,6 +108,20 @@ def run_daily_pipeline() -> dict:
 
         # Step 3: Train models
         logger.info("=== Step 3: Model Training ===")
+        # Guard: skip if no target columns exist (e.g. zero observed labels fetched)
+        target_cols_map = {
+            "24h": "target_aqi_24h",
+            "48h": "target_aqi_48h",
+            "72h": "target_aqi_72h",
+        }
+        available_targets = {k: v for k, v in target_cols_map.items() if v in train_df.columns}
+        if not available_targets:
+            logger.warning("No target columns found in training data — skipping training")
+            status["steps"]["training"] = {"status": "skipped", "detail": "No observed labels in backfill. Run again after hourly pipeline accumulates data."}
+            status["completed_at"] = format_iso(now_local())
+            _save_daily_status(status)
+            return status
+
         feature_cols = [
             c for c in featured.columns
             if not c.startswith("target_")

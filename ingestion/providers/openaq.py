@@ -279,6 +279,9 @@ class OpenAQProvider(BaseProvider):
 
                         # Check if more pages
                         found = data.get("meta", {}).get("found", 0)
+                        # OpenAQ returns ">1000" as a string for large results
+                        if isinstance(found, str):
+                            found = int(found.lstrip(">"))
                         if page * 1000 >= found:
                             break
                         page += 1
