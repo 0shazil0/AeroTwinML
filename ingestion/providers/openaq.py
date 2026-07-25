@@ -220,13 +220,15 @@ class OpenAQProvider(BaseProvider):
 
     def _load_from_csv(self, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
         """Load historical data from bundled CSV."""
-        csv_paths = [
-            Path(__file__).resolve().parent.parent.parent.parent / "openaq_location_4889110_measurments.csv",
-            Path(__file__).resolve().parent.parent.parent.parent / "openaq_location_4889110_measurments (1).csv",
+        # Try multiple possible locations — repo root, CWD, etc.
+        candidates = [
+            Path.cwd() / "openaq_location_4889110_measurments.csv",
+            Path.cwd() / "openaq_location_4889110_measurments (1).csv",
+            Path(__file__).resolve().parent.parent.parent / "openaq_location_4889110_measurments.csv",
         ]
-        csv_path = next((p for p in csv_paths if p.exists()), None)
+        csv_path = next((p for p in candidates if p.exists()), None)
         if csv_path is None:
-            self.logger.info("No CSV file found — using API")
+            self.logger.info("No CSV file found (checked: %s) — using API", [str(p) for p in candidates[:2]])
             return None
 
         df = pd.read_csv(csv_path)
