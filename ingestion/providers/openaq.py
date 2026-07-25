@@ -50,35 +50,52 @@ class OpenAQProvider(BaseProvider):
             return
 
         self.logger.info("Discovering sensors for location %d", self.location_id)
-        resp = requests.get(
-            f"{OPENAQ_BASE}/locations/{self.location_id}",
-            headers=self._headers(),
-            timeout=self.timeout,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        try:
+            resp = requests.get(
+                f"{OPENAQ_BASE}/locations/{self.location_id}",
+                headers=self._headers(),
+                timeout=self.timeout,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            self.logger.error("Failed to fetch location %d: %s", self.location_id, e)
+            return
 
-        sensors = data.get("results", [{}])[0].get("sensors", [])
+        # The response structure: {"results": [{..., "sensors": [...]}]}
+        results = data.get("results", [])
+        sensors = []
+        if isinstance(results, list) and len(results) > 0:
+            loc = results[0]
+            sensors = loc.get("sensors", [])
+            self.logger.info("Location %d has %d sensors registered", self.location_id, len(sensors))
+
+        # If not found, try top-level sensors key (some API versions)
         if not sensors:
-            sensors = data.get("results", [{}])[0].get("sensors", data.get("sensors", []))
-
-        # Also try nested path: results[0].sensors[] if present
-        if not sensors and isinstance(data.get("results"), list) and len(data["results"]) > 0:
-            sensors = data["results"][0].get("sensors", [])
+            sensors = data.get("sensors", [])
+            self.logger.info("Tried top-level sensors: %d found", len(sensors))
 
         for s in sensors:
             param = s.get("parameter", {})
-            param_name = param.get("name", param.get("id", "")).lower()
+            # Parameter can be a dict or a string depending on API version
+            if isinstance(param, dict):
+                param_name = param.get("name", param.get("id", "")).strip().lower()
+            else:
+                param_name = str(param).strip().lower()
             sensor_id = s.get("id")
             if param_name and sensor_id:
-                self._sensor_map[param_name] = sensor_id
-                self.logger.info("  Found sensor: %s → id=%d", param_name, sensor_id)
+                self._sensor_map[param_name] = int(sensor_id)
+                self.logger.info("  Found sensor: %s → id=%d", param_name, int(sensor_id))
 
         if not self._sensor_map:
             self.logger.warning(
-                "No sensors found for location %d. Check API key and location ID.",
+                "No sensors found for location %d. Raw response keys: %s",
                 self.location_id,
+                list(data.keys()) if isinstance(data, dict) else type(data).__name__,
             )
+            self.logger.warning("Dumping first result keys for debugging:")
+            if isinstance(results, list) and len(results) > 0:
+                self.logger.warning("  %s", list(results[0].keys())[:20])
 
     def fetch_raw(self) -> Dict[str, Any]:
         """Fetch latest measurement for each parameter from each sensor."""
