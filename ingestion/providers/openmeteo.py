@@ -171,33 +171,67 @@ class OpenMeteoProvider(BaseProvider):
         return df
 
     def fetch_historical(self, start_date: str, end_date: str) -> pd.DataFrame:
-        """Fetch historical hourly air quality + weather for backfill."""
-        aq_params = {
-            "latitude": self.lat,
-            "longitude": self.lon,
-            "hourly": "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide",
-            "timezone": self.tz,
-            "start_date": start_date,
-            "end_date": end_date,
-        }
+        """Fetch historical hourly air quality + weather from Open-Meteo Archive API.
+
+        The forecast endpoint only supports future dates. Historical data
+        must come from the archive endpoint.
+        """
+        # Archive endpoints (free, no API key needed)
+        archive_weather = "https://archive-api.open-meteo.com/v1/archive"
+        archive_air = "https://air-quality-api.open-meteo.com/v1/air-quality"
+
         weather_params = {
             "latitude": self.lat,
             "longitude": self.lon,
-            "hourly": "temperature_2m,relative_humidity_2m,dew_point_2m,pressure_msl,wind_speed_10m,wind_direction_10m,precipitation,cloud_cover",
-            "timezone": self.tz,
             "start_date": start_date,
             "end_date": end_date,
+            "hourly": "temperature_2m,relative_humidity_2m,dew_point_2m,pressure_msl,wind_speed_10m,wind_direction_10m,precipitation,cloud_cover",
+            "timezone": self.tz,
         }
 
-        self.logger.info("Fetching historical Open-Meteo data: %s → %s", start_date, end_date)
-        aq_resp = requests.get(self.air_quality_url, params=aq_params, timeout=self.timeout)
-        aq_resp.raise_for_status()
-        aq_data = aq_resp.json()
+        self.logger.info("Fetching historical weather: %s → %s", start_date, end_date)
+        w_resp = None
+        try:
+            w_resp = requests.get(archive_weather, params=weather_params, timeout=60)
+            w_resp.raise_for_status()
+            w_data = w_resp.json()
+        except Exception as e:
+            self.logger.warning("Historical weather fetch failed: %s", e)
+            w_data = None
 
         time.sleep(0.5)
-        w_resp = requests.get(self.weather_url, params=weather_params, timeout=self.timeout)
-        w_resp.raise_for_status()
-        w_data = w_resp.json()
 
-        raw = {"air_quality": aq_data, "weather": w_data, "fetched_at": datetime.now().isoformat()}
+        # Air quality historical — use forecast endpoint with start/end but it may
+        # only work for recent ranges. For truly historical AQI, we rely on OpenAQ labels.
+        aq_params = {
+            "latitude": self.lat,
+            "longitude": self.lon,
+            "hourly": "us_aqi,pm2_5,pm10",
+            "timezone": self.tz,
+        }
+        # Only add date range if it's within the model's recent window (last ~5 days)
+        from datetime import datetime as dt
+        end_dt = dt.strptime(end_date, "%Y-%m-%d")
+        days_back = (dt.now() - end_dt).days
+        if days_back <= 5:
+            aq_params["start_date"] = start_date
+            aq_params["end_date"] = end_date
+            aq_params["past_days"] = min(days_back + 3, 92)
+        else:
+            # For older dates, don't request AQI — use observed OpenAQ labels instead
+            aq_params["past_days"] = 92
+
+        aq_data = {"hourly": {}}
+        try:
+            aq_resp = requests.get(self.air_quality_url, params=aq_params, timeout=60)
+            aq_resp.raise_for_status()
+            aq_data = aq_resp.json()
+        except Exception as e:
+            self.logger.warning("Historical AQI fetch limited: %s (will use OpenAQ labels)", e)
+
+        raw = {
+            "air_quality": aq_data,
+            "weather": w_data or {"hourly": {}},
+            "fetched_at": dt.now().isoformat(),
+        }
         return self.normalize(raw)
