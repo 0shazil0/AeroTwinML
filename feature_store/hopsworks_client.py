@@ -196,18 +196,24 @@ def register_model(
             joblib.dump(model_obj, tmp.name)
             model_path = tmp.name
 
-        # Get or create model
+        # Get or create model — Hopsworks API: get_model auto-creates if missing
         try:
             hw_model = _mr.get_model(name=model_name)
-            if hw_model is None:
-                hw_model = _mr.create_model(name=model_name, description=description)
         except Exception:
-            hw_model = _mr.create_model(name=model_name, description=description)
+            # Some SDK versions auto-create on get; others need explicit create
+            try:
+                hw_model = _mr.get_or_create_model(name=model_name, description=description)
+            except AttributeError:
+                try:
+                    hw_model = _mr.create_model(name=model_name, description=description)
+                except AttributeError:
+                    # Last resort: just get (may raise if not exists)
+                    hw_model = _mr.get_model(name=model_name)
 
         if hw_model is None:
             raise ValueError(f"Could not get or create model '{model_name}' in Hopsworks")
 
-        # Register new version — just save the file
+        # Register new version
         hw_model.save(model_path, metrics=metrics or {})
 
         # Cleanup temp file
