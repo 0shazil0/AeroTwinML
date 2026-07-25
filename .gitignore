@@ -27,7 +27,9 @@ env/
 .ipynb_checkpoints/
 *.ipynb
 
-# Data — exclude everything except what dashboard needs
+# Data (CSV excluded but openaq measurement file allowed)
+*.csv
+!openaq_location_4889110_measurments*.csv
 data/**/*
 !data/**/.gitkeep
 !data/README.md

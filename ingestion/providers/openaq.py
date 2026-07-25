@@ -16,6 +16,7 @@ For Hyderabad station 4889110, sensors typically include:
 import os
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -217,25 +218,63 @@ class OpenAQProvider(BaseProvider):
 
         return df
 
+    def _load_from_csv(self, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
+        """Load historical data from bundled CSV."""
+        csv_paths = [
+            Path(__file__).resolve().parent.parent.parent.parent / "openaq_location_4889110_measurments.csv",
+            Path(__file__).resolve().parent.parent.parent.parent / "openaq_location_4889110_measurments (1).csv",
+        ]
+        csv_path = next((p for p in csv_paths if p.exists()), None)
+        if csv_path is None:
+            self.logger.info("No CSV file found — using API")
+            return None
+
+        df = pd.read_csv(csv_path)
+        self.logger.info("CSV loaded: %d rows, columns: %s", len(df), list(df.columns))
+
+        pm25 = df[df["parameter"].astype(str).str.lower() == "pm25"].copy()
+        self.logger.info("PM2.5 rows: %d", len(pm25))
+        if pm25.empty:
+            return None
+
+        ts_col = "datetimeLocal" if "datetimeLocal" in pm25.columns else "datetimeUtc"
+        pm25["ts"] = pd.to_datetime(pm25[ts_col], errors="coerce")
+        pm25 = pm25.dropna(subset=["ts"])
+        pm25["hour"] = pm25["ts"].dt.floor("h")
+
+        start_dt = pd.Timestamp(start_date)
+        end_dt = pd.Timestamp(end_date)
+        pm25 = pm25[(pm25["hour"] >= start_dt) & (pm25["hour"] <= end_dt)]
+        self.logger.info("Filtered to %d rows in %s..%s", len(pm25), start_date, end_date)
+        if pm25.empty:
+            return None
+
+        agg = pm25.groupby("hour").agg({"value": "mean"}).reset_index()
+        agg["pm2_5"] = agg["value"]
+        agg["timestamp"] = agg["hour"]
+        agg["source"] = "openaq_csv"
+        agg["station_name"] = f"openaq_{self.location_id}"
+        agg["aqi"] = agg["pm2_5"].apply(lambda x: round((x / 35.4) * 100, 1) if pd.notna(x) else None)
+        result = agg[["timestamp", "aqi", "pm2_5", "source", "station_name"]]
+        self.logger.info("CSV aggregated to %d hourly rows with observed labels", len(result))
+        return result
+
     def fetch_historical(
         self,
         start_date: str,
         end_date: str,
         parameters: Optional[List[str]] = None,
     ) -> pd.DataFrame:
-        """Fetch historical hourly measurements from OpenAQ for the given date range.
+        """Fetch historical hourly measurements from OpenAQ CSV data + API.
 
-        This pulls data from the /hours endpoint for each sensor, which returns
-        hourly averages — perfect for merging with Open-Meteo's hourly weather.
-
-        Parameters:
-            start_date: YYYY-MM-DD start (inclusive)
-            end_date: YYYY-MM-DD end (inclusive)
-            parameters: List of parameter names to fetch. If None, fetches all available.
-
-        Returns:
-            DataFrame with columns: timestamp, pm2_5, pm10, no2, o3, so2, co, aqi, source
+        First tries loading from the bundled CSV file which contains real station
+        measurements. Falls back to OpenAQ API for live data.
         """
+        csv_result = self._load_from_csv(start_date, end_date)
+        if csv_result is not None and not csv_result.empty:
+            return csv_result
+
+        # API fallback below — rate-limited, may not return all params
         self._ensure_sensor_map()
 
         if parameters is None:
