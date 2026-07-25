@@ -22,6 +22,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+# Load .env file so this script works standalone
+from dotenv import load_dotenv
+load_dotenv()
+
 import pandas as pd
 import requests
 
@@ -30,7 +34,7 @@ import requests
 LAT = float(os.getenv("LATITUDE", "25.396"))
 LON = float(os.getenv("LONGITUDE", "68.357"))
 TZ = os.getenv("TIMEZONE", "Asia/Karachi")
-OPENAQ_KEY = os.getenv("OPENAQ_API_KEY", "")
+OPENAQ_KEY = os.getenv("OPENAQ_API_KEY") or os.getenv("OPEN_API_KEY", "")
 OPENAQ_LOCATION_ID = int(os.getenv("OPENAQ_LOCATION_ID", "4889110"))
 OUTPUT_DIR = Path("data/backfill")
 
@@ -133,8 +137,8 @@ def fetch_openaq_sensor(
                     f"{OPENAQ_BASE}/sensors/{sensor_id}/hours",
                     headers=headers,
                     params={
-                        "datetime_from": f"{current.strftime('%Y-%m-%d')}T00:00:00+05:00",
-                        "datetime_to": f"{chunk_end.strftime('%Y-%m-%d')}T23:59:59+05:00",
+                        "datetime_from": f"{current.strftime('%Y-%m-%d')}T00:00:00",
+                        "datetime_to": f"{chunk_end.strftime('%Y-%m-%d')}T23:59:59",
                         "limit": 1000,
                         "page": page,
                         "sort": "asc",
@@ -325,6 +329,8 @@ Examples:
 
     if weather_df is not None:
         merge_and_save(weather_df, observed_df, start_date, end_date)
+    elif observed_df is not None:
+        merge_and_save(observed_df, None, start_date, end_date)
     else:
         print("\nFAILED: No data fetched -- check API keys and network")
 
