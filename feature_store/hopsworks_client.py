@@ -283,6 +283,7 @@ def log_metrics_to_store(metrics: Dict[str, float], run_name: str = "") -> bool:
     try:
         metrics["run_name"] = run_name
         metrics["logged_at"] = datetime.now().isoformat()
+        metrics["timestamp"] = pd.Timestamp.now()
         df = pd.DataFrame([metrics])
         write_feature_group(
             name="training_metrics",
@@ -290,6 +291,7 @@ def log_metrics_to_store(metrics: Dict[str, float], run_name: str = "") -> bool:
             version=1,
             description="Model training metrics per run",
             primary_key=["run_name", "logged_at"],
+            event_time="timestamp",
         )
         return True
     except Exception as e:
