@@ -13,6 +13,8 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
+
 from feature_store.feature_builder import FeatureBuilder
 from feature_store.hopsworks_client import (
     write_feature_group,
@@ -41,31 +43,61 @@ def run_daily_pipeline() -> dict:
     }
 
     try:
-        # Step 1: Backfill — 2 years via Open-Meteo + OpenAQ
-        logger.info("=== Step 1: Backfill (2 years) ===")
+        # Step 1: Fetch training data via standalone acquisition script
+        logger.info("=== Step 1: Data Acquisition (2 years) ===")
         end_date = now_local().strftime("%Y-%m-%d")
         start_date = (now_local() - timedelta(days=730)).strftime("%Y-%m-%d")
-        orchestrator = IngestionOrchestrator()
-        backfill_df = orchestrator.backfill(start_date, end_date, use_openaq=True)
-        observed_count = (
-            backfill_df["aqi"].notna().sum() if "aqi" in backfill_df.columns else 0
+
+        # Use the standalone fetcher which handles Open-Meteo + OpenAQ correctly
+        import subprocess
+        result = subprocess.run(
+            [
+                sys.executable, "-m", "scripts.fetch_training_data",
+                "--start", start_date,
+                "--end", end_date,
+                "--years", "2",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=1800,  # 30 min timeout for full 2-year fetch
         )
+        logger.info("Acquisition output:\n%s", result.stdout)
+        if result.returncode != 0:
+            logger.warning("Acquisition script warnings:\n%s", result.stderr)
+
+        # Load the produced CSV
+        csv_path = DATA_DIR / "backfill" / f"training_data_{start_date}_{end_date}.csv"
+        if csv_path.exists():
+            df = pd.read_csv(csv_path, parse_dates=["timestamp"])
+            observed_count = df["aqi"].notna().sum() if "aqi" in df.columns else 0
+            logger.info("Loaded training CSV: %d rows, %d with observed labels", len(df), observed_count)
+        else:
+            # Fall back to orchestrator if CSV not produced
+            logger.warning("CSV not found at %s — using orchestrator fallback", csv_path)
+            orchestrator = IngestionOrchestrator()
+            df = orchestrator.backfill(start_date, end_date, use_openaq=True)
+            observed_count = df["aqi"].notna().sum() if "aqi" in df.columns else 0
+
         status["steps"]["backfill"] = {
             "status": "ok",
-            "rows": len(backfill_df),
+            "rows": len(df) if df is not None else 0,
             "range": f"{start_date} → {end_date}",
             "observed_labels": observed_count,
         }
-        logger.info("Backfill: %d rows, %d with observed AQI labels", len(backfill_df), observed_count)
+        logger.info("Backfill: %d rows, %d with observed AQI labels", len(df) if df is not None else 0, observed_count)
 
         # Step 2: Build training dataset
         logger.info("=== Step 2: Build Training Dataset ===")
         merged_path = DATA_DIR / "processed" / "merged_hourly" / "merged_latest.parquet"
-        try:
-            df = load_parquet(merged_path)
-        except FileNotFoundError:
-            logger.warning("No merged data found, using backfill only")
-            df = backfill_df
+        if df is None or df.empty:
+            try:
+                df = load_parquet(merged_path)
+            except FileNotFoundError:
+                logger.warning("No data available")
+                status["steps"]["features"] = {"status": "error", "detail": "No data"}
+                status["completed_at"] = format_iso(now_local())
+                _save_daily_status(status)
+                return status
 
         if df.empty:
             status["steps"]["features"] = {"status": "error", "detail": "No data"}
