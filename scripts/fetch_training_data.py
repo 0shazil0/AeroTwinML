@@ -305,8 +305,8 @@ Examples:
         start_date = args.start
         end_date = args.end
     else:
-        end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = (datetime.now() - timedelta(days=int(args.years * 365))).strftime("%Y-%m-%d")
+        end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        start_date = (datetime.now() - timedelta(days=int(args.years * 365) + 1)).strftime("%Y-%m-%d")
 
     print("=" * 60)
     print("  AeroTwinML -- Training Data Acquisition")
