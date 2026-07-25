@@ -24,7 +24,7 @@ jobs:
         run: |
           pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil fastapi uvicorn pydantic flask jinja2 plotly
           pip install "hopsworks[python]" hsml
-          pip install shap xgboost lightgbm joblib
+          pip install shap xgboost lightgbm joblib pytest
 
       - name: Run daily pipeline (backfill 2yr → features → train → Hopsworks MR)
         env:
