@@ -27,10 +27,13 @@ env/
 .ipynb_checkpoints/
 *.ipynb
 
-# Data — exclude everything except .gitkeep markers
+# Data — exclude everything except what dashboard needs
 data/**/*
 !data/**/.gitkeep
 !data/README.md
+!data/processed/predictions/forecast_latest.json
+!data/processed/pipeline_status.json
+!data/raw/logs/alerts.jsonl
 
 # Model artifacts
 models/artifacts/

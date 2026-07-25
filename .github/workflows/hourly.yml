@@ -2,8 +2,11 @@ name: Hourly AQI Pipeline (Serverless)
 
 on:
   schedule:
-    - cron: "0 * * * *"  # Every hour
-  workflow_dispatch:      # Manual trigger
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   run-hourly-pipeline:
@@ -21,9 +24,9 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil fastapi uvicorn pydantic flask jinja2 plotly
+        run: pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil flask jinja2 plotly
 
-      - name: Run hourly pipeline (ingestion + features → Hopsworks FS + inference)
+      - name: Run hourly pipeline
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
           OPENAQ_LOCATION_ID: ${{ secrets.OPENAQ_LOCATION_ID }}
@@ -33,16 +36,10 @@ jobs:
           HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
         run: python -m pipelines.hourly_pipeline
 
-      - name: Upload forecast artifact (for dashboard)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: forecast-latest
-          path: data/processed/predictions/forecast_latest.json
-
-      - name: Upload pipeline status
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hourly-status
-          path: data/processed/pipeline_status.json
+      - name: Commit forecast for dashboard
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/predictions/forecast_latest.json data/processed/pipeline_status.json data/raw/logs/alerts.jsonl 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Hourly forecast update [skip ci]"
+          git pull --rebase origin main && git push origin main
