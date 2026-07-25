@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Data Sources{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Data Sources & Architecture</h2>
+
+<!-- Provider Cards -->
+<div class="grid-2" style="margin-bottom: 24px;">
+    {% if sources and sources.providers %}
+    {% for provider in sources.providers %}
+    <div class="card" style="border-top: 4px solid var(--accent-cyan);">
+        <div class="card-header">{{ provider.name }}</div>
+        <div style="background: var(--bg-secondary); padding: 10px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; color: var(--accent-cyan);">
+            Role: {{ provider.role }}
+        </div>
+        <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
+            {{ provider.description }}
+        </p>
+        <div style="font-size: 12px; color: var(--text-secondary);">
+            <strong>Used for:</strong> {{ provider.used_for }}
+        </div>
+        {% if provider.station %}
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+            <strong>Station:</strong> {{ provider.station }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card">
+        <p style="color: var(--text-secondary); padding: 40px; text-align: center;">Source information loading...</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Merge Logic -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">How Data is Merged</div>
+    <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 16px; align-items: center; padding: 32px 16px;">
+        <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: var(--radius-md);">
+            <div style="font-size: 24px; margin-bottom: 8px;">🌤</div>
+            <div style="font-weight: 700; color: var(--accent-cyan);">Open-Meteo</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">Weather Features<br>Forecast Inputs</div>
+        </div>
+        <div style="font-size: 24px; color: var(--accent-cyan);">+</div>
+        <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: var(--radius-md);">
+            <div style="font-size: 24px; margin-bottom: 8px;">📡</div>
+            <div style="font-weight: 700; color: var(--accent-green);">AQICN</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">Observed Labels<br>Ground Truth</div>
+        </div>
+        <div style="font-size: 24px; color: var(--accent-cyan);">→</div>
+        <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: var(--radius-md); border: 2px solid var(--accent-cyan);">
+            <div style="font-size: 24px; margin-bottom: 8px;">🧠</div>
+            <div style="font-weight: 700; color: var(--text-primary);">ML Model</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">Weather → Future AQI</div>
+        </div>
+    </div>
+    <p style="color: var(--text-secondary); font-size: 13px; padding: 16px; line-height: 1.6; text-align: center;">
+        {{ sources.merge_strategy.description if sources and sources.merge_strategy else 'Data merged on hourly timestamps in Asia/Karachi timezone.' }}
+    </p>
+</div>
+
+<!-- Fallback Logic -->
+<div class="card">
+    <div class="card-header">Robustness & Fallback Logic</div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+        {% set steps = (sources.fallback_logic if sources and sources.fallback_logic else '').split('. ') %}
+        {% for step in steps %}
+        {% if step %}
+        <div class="pipeline-step">
+            <span class="step-indicator step-ok"></span>
+            <span style="font-size: 13px;">{{ step.strip().rstrip('.') }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

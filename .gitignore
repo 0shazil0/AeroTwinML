@@ -1,0 +1,57 @@
+# Environment
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data — exclude everything except .gitkeep markers
+data/**/*
+!data/**/.gitkeep
+!data/README.md
+
+# Model artifacts
+models/artifacts/
+mlruns/
+mlartifacts/
+
+# MLflow
+mlflow.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+data/raw/logs/*.log
+
+# Docker
+.docker/

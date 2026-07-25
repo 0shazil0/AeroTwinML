@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}72-Hour Forecast{% endblock %}
+
+{% block head_extra %}
+<style>
+.forecast-timeline {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    margin: 16px 0;
+}
+.timeline-block {
+    padding: 8px 4px;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 10px;
+}
+.forecast-now { margin-bottom: 24px; }
+.forecast-now .aqi-number { font-size: 48px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">72-Hour AQI Forecast</h2>
+
+<div class="grid-3" style="margin-bottom: 24px;">
+    {% for h in ['24h', '48h', '72h'] %}
+    {% set f = forecast.forecast[h] if forecast and forecast.forecast else {} %}
+    <div class="card" style="text-align: center; border-top: 4px solid {{ '#00e400' if not f.get('alert') else '#ff3333' }};">
+        <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">In {{ h }}</div>
+        <div style="font-size: 48px; font-weight: 800; color: {{ '#00e400' if not f.get('alert') else '#ff3333' }};">
+            {{ f.get('aqi', '--') }}
+        </div>
+        <span class="badge badge-{{ (f.get('category', 'good')).lower().replace(' ', '-').replace('for-', '').replace('-groups', '')[:20] }}">
+            {{ f.get('category', 'Unknown') }}
+        </span>
+        {% if f.get('alert') %}
+        <div style="margin-top: 8px; color: var(--accent-maroon); font-weight: 600;">⚠ Alert Level</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Forecast Chart -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">Forecast Trend (72 hours)</div>
+    <div id="forecast-chart" class="chart-container" style="height: 400px;"></div>
+</div>
+
+<!-- Pollutant Breakdown -->
+<div class="grid-2" style="margin-bottom: 24px;">
+    <div class="card">
+        <div class="card-header">Pollutant Breakdown</div>
+        {% if pollutants %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for key, label in [('pm2_5', 'PM2.5'), ('pm10', 'PM10'), ('no2', 'NO₂'), ('o3', 'O₃'), ('so2', 'SO₂'), ('co', 'CO')] %}
+            {% set val = pollutants.get(key) %}
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="width: 60px; font-size: 12px; color: var(--text-secondary);">{{ label }}</span>
+                <div style="flex: 1; background: var(--bg-secondary); border-radius: 4px; height: 8px;">
+                    <div style="width: {{ (val / 500 * 100) | min(100) if val else 0 }}%; height: 100%; border-radius: 4px; background: var(--accent-cyan);"></div>
+                </div>
+                <span style="width: 60px; text-align: right; font-size: 13px; font-weight: 600;">{{ val | round(1) if val else '--' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); padding: 20px;">Pollutant data not available.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">Weather Impact</div>
+        <div id="weather-drivers" style="padding: 20px; color: var(--text-secondary);">
+            Loading weather drivers...
+        </div>
+    </div>
+</div>
+
+<!-- Historical Context -->
+<div class="card">
+    <div class="card-header">Historical Context (7-Day Trend)</div>
+    <div id="history-chart" class="chart-container" style="height: 350px;"></div>
+</div>
+
+<script>
+    // Forecast chart
+    {% if forecast and forecast.forecast %}
+    const forecastData = {{ forecast | tojson }};
+    const now = new Date();
+    const timestamps = [];
+    const aqiValues = [];
+    const categories = [];
+
+    for (let h = 0; h <= 72; h += 3) {
+        const dt = new Date(now.getTime() + h * 3600000);
+        timestamps.push(dt.toLocaleString('en-PK', { month: 'short', day: 'numeric', hour: '2-digit' }));
+        // Interpolate between forecast points
+        if (h <= 24 && forecastData.forecast['24h']) {
+            aqiValues.push(forecastData.forecast['24h'].aqi);
+        } else if (h <= 48 && forecastData.forecast['48h']) {
+            aqiValues.push(forecastData.forecast['48h'].aqi);
+        } else if (forecastData.forecast['72h']) {
+            aqiValues.push(forecastData.forecast['72h'].aqi);
+        } else {
+            aqiValues.push(null);
+        }
+    }
+
+    const traceForecast = {
+        x: timestamps,
+        y: aqiValues,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Forecast AQI',
+        line: { color: '#00d4ff', width: 3 },
+        marker: { color: '#00d4ff', size: 6 }
+    };
+
+    const layout = {
+        paper_bgcolor: '#1a1a35',
+        plot_bgcolor: '#1a1a35',
+        font: { color: '#e8e8f0' },
+        xaxis: { gridcolor: '#2a2a4a', title: 'Time' },
+        yaxis: { gridcolor: '#2a2a4a', title: 'AQI' },
+        margin: { l: 50, r: 20, t: 10, b: 50 },
+        showlegend: true,
+        legend: { font: { color: '#e8e8f0' } },
+        shapes: [
+            // Alert threshold
+            { type: 'line', x0: timestamps[0], x1: timestamps[timestamps.length-1], y0: 200, y1: 200,
+              line: { color: '#ff3333', dash: 'dash', width: 1 }, name: 'Alert (200)' }
+        ]
+    };
+
+    Plotly.newPlot('forecast-chart', [traceForecast], layout);
+    {% endif %}
+
+    // History chart
+    {% if history and history | length > 0 %}
+    const historyData = {{ history | tojson }};
+    const histTimestamps = historyData.map(d => d.timestamp);
+    const histAQI = historyData.map(d => d.aqi);
+    const histTemp = historyData.map(d => d.temperature);
+
+    const traceAQI = {
+        x: histTimestamps,
+        y: histAQI,
+        type: 'scatter',
+        mode: 'lines',
+        name: 'AQI',
+        line: { color: '#00e400', width: 1.5 },
+        yaxis: 'y'
+    };
+
+    const layoutHist = {
+        paper_bgcolor: '#1a1a35',
+        plot_bgcolor: '#1a1a35',
+        font: { color: '#e8e8f0' },
+        xaxis: { gridcolor: '#2a2a4a', title: 'Time' },
+        yaxis: { gridcolor: '#2a2a4a', title: 'AQI', side: 'left' },
+        margin: { l: 50, r: 20, t: 10, b: 50 },
+        showlegend: false
+    };
+
+    Plotly.newPlot('history-chart', [traceAQI], layoutHist);
+    {% endif %}
+</script>
+{% endblock %}

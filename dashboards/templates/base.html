@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Pearls AQI Predictor{% endblock %} — {{ city }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <!-- Alert Banner -->
+    <div id="alert-banner" class="alert-banner hidden">
+        <span class="alert-icon">⚠</span>
+        <span class="alert-text"></span>
+        <button class="alert-dismiss" onclick="dismissAlert()">×</button>
+    </div>
+
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <span class="brand-icon">🌫</span>
+            <span class="brand-name">AQI Predictor</span>
+        </div>
+        <div class="nav-info">
+            <span class="nav-city">{{ city }}, Pakistan</span>
+            <span class="nav-time" id="nav-time">--</span>
+            <span class="nav-status" id="nav-status">
+                <span class="status-dot"></span> Live
+            </span>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <a href="/forecast" class="nav-item {% if request.path == '/forecast' %}active{% endif %}">
+                <span class="nav-icon">📈</span> Forecast
+            </a>
+            <a href="/analytics" class="nav-item {% if request.path == '/analytics' %}active{% endif %}">
+                <span class="nav-icon">🔍</span> Analytics
+            </a>
+            <a href="/explainability" class="nav-item {% if request.path == '/explainability' %}active{% endif %}">
+                <span class="nav-icon">🧠</span> Explainability
+            </a>
+            <a href="/pipeline" class="nav-item {% if request.path == '/pipeline' %}active{% endif %}">
+                <span class="nav-icon">⚙</span> Pipeline
+            </a>
+            <a href="/data-sources" class="nav-item {% if request.path == '/data-sources' %}active{% endif %}">
+                <span class="nav-icon">🗄</span> Data Sources
+            </a>
+            <a href="/digital-twin" class="nav-item {% if request.path == '/digital-twin' %}active{% endif %}">
+                <span class="nav-icon">🌐</span> Digital Twin
+            </a>
+            <a href="/settings" class="nav-item {% if request.path == '/settings' %}active{% endif %}">
+                <span class="nav-icon">🔧</span> Settings
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Format time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('nav-time').textContent = now.toLocaleString('en-PK', {
+                timeZone: 'Asia/Karachi',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                day: 'numeric', month: 'short'
+            });
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Alert banner
+        function showAlert(message) {
+            const banner = document.getElementById('alert-banner');
+            banner.querySelector('.alert-text').textContent = message;
+            banner.classList.remove('hidden');
+        }
+        function dismissAlert() {
+            document.getElementById('alert-banner').classList.add('hidden');
+        }
+
+        // Auto-refresh status
+        async function checkStatus() {
+            try {
+                const resp = await fetch('{{ config.get("API_BASE_URL", "http://localhost:8000") }}/api/v1/status');
+                const data = await resp.json();
+                const dot = document.querySelector('.status-dot');
+                if (data.pipeline && data.pipeline.success) {
+                    dot.style.background = '#00e400';
+                } else if (data.pipeline) {
+                    dot.style.background = '#ff7e00';
+                }
+            } catch(e) {}
+        }
+        setInterval(checkStatus, 60000);
+        checkStatus();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

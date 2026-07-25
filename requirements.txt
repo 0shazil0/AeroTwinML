@@ -1,0 +1,67 @@
+# AQI Predictor — Full Dependencies
+# Python 3.10+
+
+# API & HTTP
+requests>=2.31.0
+httpx>=0.25.0
+
+# Data processing
+pandas>=2.1.0
+numpy>=1.24.0
+pyarrow>=14.0.0
+
+# Machine learning
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+lightgbm>=4.1.0
+
+# Deep learning (optional, lightweight)
+# tensorflow>=2.13.0
+# torch>=2.1.0
+
+# Explainability
+shap>=0.42.0
+lime>=0.2.0
+
+# Experiment tracking & model registry (fallback)
+mlflow>=2.8.0
+
+# Hopsworks Feature Store & Model Registry (primary)
+hopsworks[python]>=4.0.0
+hsml>=0.12.0
+
+# Backend API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Dashboard UI
+flask>=3.0.0
+jinja2>=3.1.0
+
+# Configuration & env
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Timezone handling
+pytz>=2023.3
+python-dateutil>=2.8.0
+
+# Charts & visualization
+plotly>=5.18.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# Jupyter (for EDA)
+jupyter>=1.0.0
+notebook>=7.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# Code quality
+black>=23.11.0
+flake8>=6.1.0

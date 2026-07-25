@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="margin-bottom: 24px;">
+    <!-- Hero AQI -->
+    <div class="hero-aqi {% if aqi.aqi and aqi.aqi >= 200 %}danger{% endif %}">
+        <div class="aqi-number" style="color: {{ aqi.category_color or '#00e400' }};" id="aqi-display">
+            {{ aqi.aqi | round(0) if aqi.aqi else '--' }}
+        </div>
+        <div class="aqi-label" style="color: {{ aqi.category_color or '#00e400' }};">
+            {{ aqi.category or 'No Data' }}
+        </div>
+        <div class="aqi-advice">
+            {{ aqi.health_advice or 'Loading...' }}
+        </div>
+    </div>
+
+    <!-- Weather Snapshot -->
+    <div class="card">
+        <div class="card-header">Current Weather — {{ city }}</div>
+        {% if aqi.weather %}
+        <div class="grid-2">
+            <div class="stat-card">
+                <div class="stat-value">{{ aqi.weather.temperature | round(1) if aqi.weather.temperature else '--' }}°</div>
+                <div class="stat-label">Temperature</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ aqi.weather.humidity | round(0) if aqi.weather.humidity else '--' }}%</div>
+                <div class="stat-label">Humidity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ aqi.weather.wind_speed | round(1) if aqi.weather.wind_speed else '--' }}</div>
+                <div class="stat-label">Wind (m/s)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ aqi.weather.pressure | round(0) if aqi.weather.pressure else '--' }}</div>
+                <div class="stat-label">Pressure (hPa)</div>
+            </div>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+            Weather data not available. Run the pipeline to collect data.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Stats Row -->
+<div class="grid-4" style="margin-bottom: 24px;">
+    <div class="card stat-card">
+        <div class="stat-value">{{ aqi.pm2_5 | round(1) if aqi.pm2_5 else '--' }}</div>
+        <div class="stat-label">PM2.5 (μg/m³)</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-value">{{ aqi.pm10 | round(1) if aqi.pm10 else '--' }}</div>
+        <div class="stat-label">PM10 (μg/m³)</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-value">{{ aqi.dominant_pollutant or '--' }}</div>
+        <div class="stat-label">Dominant Pollutant</div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-value" style="font-size: 18px;">{{ aqi.updated_at or 'N/A' }}</div>
+        <div class="stat-label">Last Updated</div>
+    </div>
+</div>
+
+<!-- Forecast Preview + Alerts -->
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">72-Hour Forecast Preview</div>
+        {% if forecast and forecast.forecast %}
+        <table class="forecast-table">
+            <thead><tr><th>Horizon</th><th>AQI</th><th>Category</th><th>Alert</th></tr></thead>
+            <tbody>
+                {% for h in ['24h', '48h', '72h'] %}
+                {% set f = forecast.forecast[h] %}
+                <tr>
+                    <td><strong>+{{ h }}</strong></td>
+                    <td style="font-size: 20px; font-weight: 700;">{{ f.aqi }}</td>
+                    <td><span class="badge badge-{{ (f.category or 'good').lower().replace(' ', '-').replace('for-', '').replace('-groups', '')[:20] }}">{{ f.category }}</span></td>
+                    <td>{% if f.alert %}<span style="color: var(--accent-maroon);">⚠ Alert</span>{% else %}<span style="color: var(--accent-green);">✓ Safe</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+            Forecast data not yet available. Pipeline needs to run.
+        </p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">Recent Alerts</div>
+        {% if alerts %}
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for alert in alerts %}
+            <div style="background: var(--bg-secondary); padding: 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--accent-maroon);">
+                <strong>{{ alert.type | replace('_', ' ') | title }}</strong>:
+                AQI {{ alert.aqi }} — {{ alert.level or alert.category or 'Alert' }}
+                {% if alert.horizon %}<span style="color: var(--text-muted);">({{ alert.horizon }})</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 40px;">
+            No alerts. Air quality is within safe levels.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Animate AQI number
+    const display = document.getElementById('aqi-display');
+    if (display && display.textContent !== '--') {
+        const target = parseFloat(display.textContent);
+        let current = 0;
+        const duration = 800;
+        const step = target / (duration / 16);
+        function animate() {
+            current += step;
+            if (current >= target) {
+                display.textContent = Math.round(target);
+                return;
+            }
+            display.textContent = Math.round(current);
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    // Check for alerts
+    {% if aqi.aqi and aqi.aqi >= 200 %}
+    showAlert('⚠ Hazardous Air Quality Alert: AQI is {{ aqi.aqi | round(0) }} — {{ aqi.category }}');
+    {% endif %}
+</script>
+{% endblock %}

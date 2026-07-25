@@ -1,0 +1,100 @@
+# AQI Predictor — Central Configuration
+# All values can be overridden by environment variables
+
+city:
+  name: Hyderabad
+  country: Pakistan
+  latitude: 25.396
+  longitude: 68.357
+  timezone: Asia/Karachi
+
+providers:
+  open_meteo:
+    base_url: https://air-quality-api.open-meteo.com/v1/air-quality
+    weather_url: https://api.open-meteo.com/v1/forecast
+    rate_limit_per_min: 60
+    timeout_seconds: 30
+
+  aqicn:
+    base_url: https://api.waqi.info
+    station_id: A546205
+    rate_limit_per_min: 10
+    timeout_seconds: 30
+
+  openaq:
+    base_url: https://api.openaq.org/v3
+    location_id: 4889110
+    rate_limit_per_min: 60
+    rate_limit_per_hour: 2000
+    timeout_seconds: 30
+    backfill_chunk_days: 90  # fetch in 90-day windows to manage pagination
+
+pipeline:
+  backend: serverless  # runs on GitHub Actions, no persistent servers
+  ingestion:
+    fetch_interval_minutes: 60
+    max_gap_fill_hours: 72
+
+  features:
+    lag_hours: [1, 6, 24, 72]
+    rolling_windows_hours: [6, 24]
+    target_horizons_hours: [24, 48, 72]
+
+  training:
+    validation_strategy: walk_forward
+    test_split_ratio: 0.2
+    retrain_cadence: daily
+    min_training_samples: 168  # one week of hourly data
+
+aqi_thresholds:
+  good: [0, 50]
+  moderate: [51, 100]
+  unhealthy_sensitive: [101, 150]
+  unhealthy: [151, 200]
+  very_unhealthy: [201, 300]
+  hazardous: [301, 999]
+
+  alert_threshold: 200  # trigger alert banner at very_unhealthy+
+
+alerts:
+  enabled: true
+  cooldown_hours: 3  # don't repeat same alert within 3h
+
+storage:
+  raw_format: json
+  processed_format: parquet
+  db_type: sqlite
+  data_dir: ./data
+
+model_registry:
+  backend: hopsworks  # hopsworks | mlflow | local
+  metric_primary: rmse_24h
+  metric_secondary: [rmse_48h, rmse_72h, mae_24h, r2_24h]
+  model_name: aqi_forecaster
+
+hopsworks:
+  host: eu-west.cloud.hopsworks.ai
+  port: 443
+  project: AeroTwinML
+  feature_store:
+    merged_fg_name: aqi_features
+    training_fg_name: aqi_training_features
+    metrics_fg_name: training_metrics
+    version: 1
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins:
+    - http://localhost:5000
+    - http://localhost:8501
+
+dashboard:
+  host: 0.0.0.0
+  port: 5000
+  theme: dark
+  refresh_interval_seconds: 60
+
+logging:
+  level: INFO
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"

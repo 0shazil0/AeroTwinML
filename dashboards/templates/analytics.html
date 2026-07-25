@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Analytics & Historical Trends</h2>
+
+<div class="grid-2" style="margin-bottom: 24px;">
+    <div class="card">
+        <div class="card-header">Historical AQI Timeline</div>
+        <div id="timeline-chart" class="chart-container" style="height: 400px;"></div>
+    </div>
+    <div class="card">
+        <div class="card-header">Diurnal Pattern — Avg AQI by Hour</div>
+        <div id="hourly-chart" class="chart-container" style="height: 400px;"></div>
+    </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 24px;">
+    <div class="card">
+        <div class="card-header">Weather vs AQI Scatter</div>
+        <div id="scatter-chart" class="chart-container" style="height: 400px;"></div>
+    </div>
+    <div class="card">
+        <div class="card-header">Pollutant Comparison (7-Day)</div>
+        <div id="pollutant-chart" class="chart-container" style="height: 400px;"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Peak Pollution Windows</div>
+    <div id="peak-chart" class="chart-container" style="height: 300px;"></div>
+</div>
+
+<script>
+{% if history and history | length > 0 %}
+const data = {{ history | tojson }};
+const timestamps = data.map(d => d.timestamp);
+const aqiVals = data.map(d => d.aqi);
+const tempVals = data.map(d => d.temperature);
+const humidVals = data.map(d => d.humidity);
+
+// Timeline chart
+Plotly.newPlot('timeline-chart', [{
+    x: timestamps, y: aqiVals, type: 'scatter', mode: 'lines',
+    name: 'AQI', line: { color: '#00d4ff', width: 1.5 }
+}], {
+    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
+    font: { color: '#e8e8f0' },
+    xaxis: { gridcolor: '#2a2a4a' }, yaxis: { gridcolor: '#2a2a4a', title: 'AQI' },
+    margin: { l: 50, r: 10, t: 10, b: 50 }
+});
+
+// Hourly pattern
+const hours = data.reduce((acc, d) => {
+    const h = new Date(d.timestamp).getHours();
+    if (!acc[h]) acc[h] = { sum: 0, count: 0 };
+    acc[h].sum += d.aqi || 0; acc[h].count++;
+    return acc;
+}, {});
+const hourLabels = Array.from({length: 24}, (_, i) => `${i}:00`);
+const hourAvgs = Array.from({length: 24}, (_, i) => {
+    const h = hours[i];
+    return h && h.count > 0 ? h.sum / h.count : null;
+});
+
+Plotly.newPlot('hourly-chart', [{
+    x: hourLabels, y: hourAvgs, type: 'bar',
+    marker: { color: '#4da6ff' }, name: 'Avg AQI'
+}], {
+    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
+    font: { color: '#e8e8f0' },
+    xaxis: { gridcolor: '#2a2a4a', title: 'Hour of Day' },
+    yaxis: { gridcolor: '#2a2a4a', title: 'Average AQI' },
+    margin: { l: 50, r: 10, t: 10, b: 70 }
+});
+
+// Scatter: Temperature vs AQI
+Plotly.newPlot('scatter-chart', [{
+    x: tempVals, y: aqiVals, type: 'scatter', mode: 'markers',
+    marker: { color: '#ff7e00', size: 6, opacity: 0.6 },
+    name: 'Temp vs AQI'
+}], {
+    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
+    font: { color: '#e8e8f0' },
+    xaxis: { gridcolor: '#2a2a4a', title: 'Temperature (°C)' },
+    yaxis: { gridcolor: '#2a2a4a', title: 'AQI' },
+    margin: { l: 50, r: 10, t: 10, b: 50 }
+});
+
+{% else %}
+document.querySelectorAll('.card').forEach(c => {
+    const header = c.querySelector('.card-header');
+    if (!header) return;
+    const div = document.createElement('div');
+    div.style.cssText = 'color: var(--text-secondary); padding: 40px; text-align: center;';
+    div.textContent = 'No historical data available yet. Run the pipeline to collect data.';
+    c.appendChild(div);
+});
+{% endif %}
+</script>
+{% endblock %}

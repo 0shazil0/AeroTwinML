@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Settings</h2>
+
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">City Configuration</div>
+    <div class="grid-2" style="padding: 16px 0;">
+        <div>
+            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">City</label>
+            <input type="text" value="{{ city }}" disabled style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); width: 100%;">
+        </div>
+        <div>
+            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Country</label>
+            <input type="text" value="Pakistan" disabled style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); width: 100%;">
+        </div>
+        <div>
+            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Latitude</label>
+            <input type="text" value="25.396" disabled style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); width: 100%;">
+        </div>
+        <div>
+            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Longitude</label>
+            <input type="text" value="68.357" disabled style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); width: 100%;">
+        </div>
+        <div>
+            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Timezone</label>
+            <input type="text" value="Asia/Karachi" disabled style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); width: 100%;">
+        </div>
+        <div>
+            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">AQICN Station</label>
+            <input type="text" value="A546205" disabled style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); width: 100%;">
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">System</div>
+    <div style="padding: 20px 0; color: var(--text-secondary); font-size: 13px; line-height: 1.8;">
+        <p><strong>Backend API:</strong> <code style="background: var(--bg-secondary); padding: 2px 8px; border-radius: 4px;">http://localhost:8000</code></p>
+        <p><strong>Dashboard:</strong> <code style="background: var(--bg-secondary); padding: 2px 8px; border-radius: 4px;">http://localhost:5000</code></p>
+        <p><strong>MLflow UI:</strong> <code style="background: var(--bg-secondary); padding: 2px 8px; border-radius: 4px;">http://localhost:5001</code></p>
+        <p><strong>API Docs:</strong> <a href="http://localhost:8000/docs" target="_blank" style="color: var(--accent-cyan);">Swagger UI</a> | <a href="http://localhost:8000/redoc" target="_blank" style="color: var(--accent-cyan);">ReDoc</a></p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Alert Thresholds</div>
+    <table class="forecast-table">
+        <thead><tr><th>Category</th><th>AQI Range</th><th>Color</th></tr></thead>
+        <tbody>
+            <tr><td>Good</td><td>0 – 50</td><td><span class="badge badge-good">#00e400</span></td></tr>
+            <tr><td>Moderate</td><td>51 – 100</td><td><span class="badge badge-moderate">#ffff00</span></td></tr>
+            <tr><td>Unhealthy for Sensitive</td><td>101 – 150</td><td><span class="badge badge-sensitive">#ff7e00</span></td></tr>
+            <tr><td>Unhealthy</td><td>151 – 200</td><td><span class="badge badge-unhealthy">#ff0000</span></td></tr>
+            <tr><td>Very Unhealthy</td><td>201 – 300</td><td><span class="badge badge-very-unhealthy">#8f3f97</span></td></tr>
+            <tr><td>Hazardous</td><td>301+</td><td><span class="badge badge-hazardous">#7e0023</span></td></tr>
+        </tbody>
+    </table>
+    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 12px;">
+        Alert banner is triggered when AQI ≥ 200 (Very Unhealthy or Hazardous)
+    </p>
+</div>
+{% endblock %}

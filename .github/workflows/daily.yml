@@ -1,0 +1,47 @@
+name: Daily Retraining Pipeline (Serverless)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"  # 2 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  run-daily-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil fastapi uvicorn pydantic flask jinja2 plotly
+          pip install "hopsworks[python]" hsml
+          pip install shap xgboost lightgbm joblib
+
+      - name: Run daily pipeline (backfill 2yr → features → train → Hopsworks MR)
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+          OPENAQ_LOCATION_ID: ${{ secrets.OPENAQ_LOCATION_ID }}
+          AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          HOPSWORKS_PROJECT: ${{ secrets.HOPSWORKS_PROJECT }}
+          HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
+        run: python -m pipelines.daily_pipeline
+
+      - name: Run tests
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-status
+          path: data/processed/daily_status.json

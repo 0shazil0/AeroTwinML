@@ -1,0 +1,40 @@
+# AQI Predictor — Docker Runtime Dependencies
+# Lean: only what's needed in production containers.
+# Dev tools (jupyter, pytest, black) excluded — they stay in requirements.txt for local dev.
+
+# API & HTTP
+requests>=2.31.0
+
+# Data processing
+pandas>=2.1.0
+numpy>=1.24.0
+pyarrow>=14.0.0
+
+# Machine learning
+scikit-learn>=1.3.0
+
+# Explainability (optional — graceful fallback if missing)
+shap>=0.42.0
+
+# Experiment tracking & model registry
+mlflow>=2.8.0
+
+# Backend API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+
+# Dashboard UI
+flask>=3.0.0
+jinja2>=3.1.0
+
+# Configuration & env
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Timezone handling
+pytz>=2023.3
+python-dateutil>=2.8.0
+
+# Lightweight charting (used by dashboard templates)
+plotly>=5.18.0

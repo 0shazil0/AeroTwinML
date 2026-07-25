@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Model Explainability{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Model Explainability</h2>
+
+<!-- Natural Language Summary -->
+<div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--accent-cyan);">
+    <div class="card-header">Why This Prediction?</div>
+    <p style="font-size: 18px; line-height: 1.6; padding: 16px 0;">
+        {{ explanation.natural_language or 'Explanation will be available after the model runs predictions.' }}
+    </p>
+    <span style="font-size: 12px; color: var(--text-muted);">
+        Method: {{ explanation.method or 'N/A' }}
+    </span>
+</div>
+
+<div class="grid-2" style="margin-bottom: 24px;">
+    <!-- Feature Importance Chart -->
+    <div class="card">
+        <div class="card-header">Global Feature Importance</div>
+        <div id="importance-chart" class="chart-container" style="height: 450px;"></div>
+    </div>
+
+    <!-- Top Drivers -->
+    <div class="card">
+        <div class="card-header">Top Drivers — Latest Prediction</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px 0;">
+            {% if explanation.top_drivers %}
+            {% for driver in explanation.top_drivers[:8] %}
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--bg-secondary); border-radius: var(--radius-sm);">
+                <span style="color: {{ '#00e400' if driver.direction == 'positive' else '#ff3333' }}; font-size: 18px;">
+                    {{ '↑' if driver.direction == 'positive' else '↓' }}
+                </span>
+                <span style="flex: 1; font-size: 13px; font-weight: 500;">{{ driver.feature | replace('_', ' ') | title }}</span>
+                <span style="font-size: 13px; font-weight: 600; color: var(--accent-cyan);">
+                    {{ (driver.importance or driver.shap_value or driver.weight) | round(4) }}
+                </span>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color: var(--text-secondary); padding: 40px; text-align: center;">
+                No explanation data available. Run the pipeline with trained models first.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Feature Contribution Waterfall -->
+<div class="card">
+    <div class="card-header">Feature Contribution Waterfall</div>
+    <div id="waterfall-chart" class="chart-container" style="height: 400px;"></div>
+</div>
+
+<script>
+{% if explanation.top_drivers %}
+const drivers = {{ explanation.top_drivers | tojson }};
+
+// Horizontal bar chart
+const featNames = drivers.slice(0, 10).map(d => d.feature.replace(/_/g, ' ')).reverse();
+const featImpacts = drivers.slice(0, 10).map(d => d.importance || d.shap_value || d.weight || 0).reverse();
+const featColors = drivers.slice(0, 10).map(d => d.direction === 'positive' ? '#00e400' : '#ff3333').reverse();
+
+Plotly.newPlot('importance-chart', [{
+    x: featImpacts, y: featNames, type: 'bar', orientation: 'h',
+    marker: { color: featColors },
+    text: featImpacts.map(v => v.toFixed(4)),
+    textposition: 'outside',
+}], {
+    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
+    font: { color: '#e8e8f0' },
+    xaxis: { gridcolor: '#2a2a4a', title: 'Importance (abs SHAP/Correlation)' },
+    yaxis: { gridcolor: '#2a2a4a', automargin: true },
+    margin: { l: 120, r: 40, t: 10, b: 40 }
+});
+
+// Waterfall
+const cumSum = [];
+let total = 0;
+for (const d of drivers.slice(0, 8).reverse()) {
+    total += d.importance || 0;
+    cumSum.push({ feature: d.feature, cumulative: total, value: d.importance || 0, direction: d.direction });
+}
+
+Plotly.newPlot('waterfall-chart', [{
+    x: cumSum.map(d => d.feature.replace(/_/g, ' ')),
+    y: cumSum.map(d => d.cumulative),
+    type: 'waterfall',
+    orientation: 'v',
+    increasing: { marker: { color: '#ff3333' } },
+    decreasing: { marker: { color: '#00e400' } },
+    totals: { marker: { color: '#4da6ff' } },
+}], {
+    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
+    font: { color: '#e8e8f0' },
+    xaxis: { gridcolor: '#2a2a4a' },
+    yaxis: { gridcolor: '#2a2a4a', title: 'Cumulative Contribution' },
+    margin: { l: 80, r: 20, t: 10, b: 80 }
+});
+{% endif %}
+</script>
+{% endblock %}

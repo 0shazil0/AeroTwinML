@@ -1,0 +1,48 @@
+name: Hourly AQI Pipeline (Serverless)
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # Every hour
+  workflow_dispatch:      # Manual trigger
+
+jobs:
+  run-hourly-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil fastapi uvicorn pydantic flask jinja2 plotly
+
+      - name: Run hourly pipeline (ingestion + features → Hopsworks FS + inference)
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+          OPENAQ_LOCATION_ID: ${{ secrets.OPENAQ_LOCATION_ID }}
+          AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          HOPSWORKS_PROJECT: ${{ secrets.HOPSWORKS_PROJECT }}
+          HOPSWORKS_HOST: ${{ secrets.HOPSWORKS_HOST }}
+        run: python -m pipelines.hourly_pipeline
+
+      - name: Upload forecast artifact (for dashboard)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-latest
+          path: data/processed/predictions/forecast_latest.json
+
+      - name: Upload pipeline status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hourly-status
+          path: data/processed/pipeline_status.json
