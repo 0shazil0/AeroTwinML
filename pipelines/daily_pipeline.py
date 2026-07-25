@@ -45,8 +45,8 @@ def run_daily_pipeline() -> dict:
     try:
         # Step 1: Fetch training data via standalone acquisition script
         logger.info("=== Step 1: Data Acquisition (2 years) ===")
-        end_date = now_local().strftime("%Y-%m-%d")
-        start_date = (now_local() - timedelta(days=730)).strftime("%Y-%m-%d")
+        end_date = (now_local() - timedelta(days=1)).strftime("%Y-%m-%d")
+        start_date = (now_local() - timedelta(days=731)).strftime("%Y-%m-%d")
 
         # Use the standalone fetcher which handles Open-Meteo + OpenAQ correctly
         import subprocess

@@ -31,13 +31,13 @@ import requests
 
 # --- Config ---
 
-LAT = float(os.getenv("LATITUDE", "25.396"))
-LON = float(os.getenv("LONGITUDE", "68.357"))
-TZ = os.getenv("TIMEZONE", "Asia/Karachi")
-OPENAQ_KEY = os.getenv("OPENAQ_API_KEY") or os.getenv("OPEN_API_KEY", "")
-AQICN_TOKEN = os.getenv("AQICN_TOKEN", "")
-AQICN_STATION = os.getenv("AQICN_STATION", "A546205")
-OPENAQ_LOCATION_ID = int(os.getenv("OPENAQ_LOCATION_ID", "4889110"))
+LAT = float(os.getenv("LATITUDE") or "25.396")
+LON = float(os.getenv("LONGITUDE") or "68.357")
+TZ = os.getenv("TIMEZONE") or "Asia/Karachi"
+OPENAQ_KEY = os.getenv("OPENAQ_API_KEY") or os.getenv("OPEN_API_KEY") or ""
+AQICN_TOKEN = os.getenv("AQICN_TOKEN") or ""
+AQICN_STATION = os.getenv("AQICN_STATION") or "A546205"
+OPENAQ_LOCATION_ID = int(os.getenv("OPENAQ_LOCATION_ID") or "4889110")
 OUTPUT_DIR = Path("data/backfill")
 
 OPENMETEO_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"

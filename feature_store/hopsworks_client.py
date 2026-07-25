@@ -32,12 +32,16 @@ def _connect():
     if _project is not None:
         return
 
-    api_key = os.getenv("HOPSWORKS_API_KEY", "")
-    project_name = os.getenv("HOPSWORKS_PROJECT", "AeroTwinML")
-    host = os.getenv("HOPSWORKS_HOST", "eu-west.cloud.hopsworks.ai")
+    api_key = os.getenv("HOPSWORKS_API_KEY") or ""
+    project_name = os.getenv("HOPSWORKS_PROJECT") or "AeroTwinML"
+    host = os.getenv("HOPSWORKS_HOST") or "eu-west.cloud.hopsworks.ai"
 
     if not api_key:
-        logger.warning("HOPSWORKS_API_KEY not set — Hopsworks features disabled")
+        logger.warning("HOPSWORKS_API_KEY not set -- Hopsworks features disabled")
+        return
+
+    if not host:
+        logger.warning("HOPSWORKS_HOST not set -- Hopsworks features disabled")
         return
 
     try:
