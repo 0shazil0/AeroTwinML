@@ -4,10 +4,15 @@ Reads forecast and history directly from data files produced by GitHub Actions.
 Designed for deployment on Render / Streamlit Cloud / any free Python host.
 """
 
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path — needed when running from dashboards/ subdir
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from flask import Flask, render_template
 import os
 import json
-from pathlib import Path
 from datetime import datetime, timedelta
 
 import pandas as pd
