@@ -2,9 +2,9 @@
 Standalone data acquisition script for AeroTwinML.
 
 Fetches training data from both sources and produces a clean CSV:
-  1. Open-Meteo Archive API → historical weather (temperature, humidity, wind, etc.)
-  2. OpenAQ v3 API → observed PM2.5, PM10, NO2, O3 measurements
-  3. Merges on hourly timestamp → writes training CSV
+  1. Open-Meteo Archive API -> historical weather (temperature, humidity, wind, etc.)
+  2. OpenAQ v3 API -> observed PM2.5, PM10, NO2, O3 measurements
+  3. Merges on hourly timestamp -> writes training CSV
 
 Usage:
     python scripts/fetch_training_data.py --start 2024-01-01 --end 2026-07-25
@@ -25,7 +25,7 @@ from typing import Optional
 import pandas as pd
 import requests
 
-# ─── Config ──────────────────────────────────────────────────────
+# --- Config ---
 
 LAT = float(os.getenv("LATITUDE", "25.396"))
 LON = float(os.getenv("LONGITUDE", "68.357"))
@@ -39,11 +39,8 @@ OPENAQ_BASE = "https://api.openaq.org/v3"
 
 
 def fetch_openmeteo(start: str, end: str) -> Optional[pd.DataFrame]:
-    """Fetch historical weather from Open-Meteo Archive API.
-
-    Returns DataFrame with hourly weather columns + timestamp.
-    """
-    print(f"\n🌤  Fetching Open-Meteo weather: {start} → {end}")
+    """Fetch historical weather from Open-Meteo Archive API."""
+    print(f"\n[Open-Meteo] Fetching weather: {start} -> {end}")
     params = {
         "latitude": LAT,
         "longitude": LON,
@@ -72,19 +69,16 @@ def fetch_openmeteo(start: str, end: str) -> Optional[pd.DataFrame]:
                 df[key] = values
 
         df["timestamp"] = df["timestamp"].dt.tz_localize(TZ)
-        print(f"   ✅ {len(df)} hourly rows, {len(df.columns)-1} weather variables")
+        print(f"   OK: {len(df)} hourly rows, {len(df.columns)-1} weather variables")
         return df
     except Exception as e:
-        print(f"   ❌ Failed: {e}")
+        print(f"   FAILED: {e}")
         return None
 
 
 def discover_openaq_sensors(location_id: int) -> dict:
-    """Discover sensor IDs from OpenAQ location endpoint.
-
-    Returns dict mapping parameter_name → sensor_id.
-    """
-    print(f"\n📡 Discovering OpenAQ sensors for location {location_id}")
+    """Discover sensor IDs from OpenAQ location endpoint."""
+    print(f"\n[OpenAQ] Discovering sensors for location {location_id}")
     headers = {"X-API-Key": OPENAQ_KEY}
     try:
         resp = requests.get(
@@ -107,12 +101,12 @@ def discover_openaq_sensors(location_id: int) -> dict:
             sid = s.get("id")
             if name and sid:
                 sensor_map[name] = int(sid)
-                print(f"   {name} → sensor_id={sid}")
+                print(f"   {name} -> sensor_id={sid}")
 
         print(f"   Found {len(sensor_map)} sensors")
         return sensor_map
     except Exception as e:
-        print(f"   ❌ Location fetch failed: {e}")
+        print(f"   FAILED: {e}")
         return {}
 
 
@@ -122,21 +116,16 @@ def fetch_openaq_sensor(
     start: str,
     end: str,
 ) -> Optional[pd.DataFrame]:
-    """Fetch historical hourly measurements for one sensor.
-
-    Paginates through OpenAQ /sensors/{id}/hours endpoint.
-    """
+    """Fetch historical hourly measurements for one sensor."""
     headers = {"X-API-Key": OPENAQ_KEY}
     all_rows = []
 
-    # Fetch in 90-day chunks to manage pagination
     current = datetime.strptime(start, "%Y-%m-%d")
     end_dt = datetime.strptime(end, "%Y-%m-%d")
-
     page_count = 0
+
     while current < end_dt:
         chunk_end = min(current + timedelta(days=90), end_dt)
-
         page = 1
         while True:
             try:
@@ -154,12 +143,12 @@ def fetch_openaq_sensor(
                 )
 
                 if resp.status_code == 429:
-                    print(f"   ⏳ Rate limited (page {page}). Waiting 60s...")
+                    print(f"   Rate limited. Waiting 60s...")
                     time.sleep(60)
                     continue
 
                 if resp.status_code != 200:
-                    print(f"   HTTP {resp.status_code} on page {page}, chunk {current.date()}..{chunk_end.date()}")
+                    print(f"   HTTP {resp.status_code} on page {page}")
                     break
 
                 data = resp.json()
@@ -191,12 +180,12 @@ def fetch_openaq_sensor(
                     break
                 page += 1
                 page_count += 1
-                if page_count % 5 == 0:
+                if page_count % 10 == 0:
                     print(f"   {param_name}: {len(all_rows)} records so far...")
-                time.sleep(0.3)  # Rate limit: 60/min
+                time.sleep(0.3)
 
             except Exception as e:
-                print(f"   ❌ Error on page {page}: {e}")
+                print(f"   ERROR: {e}")
                 time.sleep(5)
                 break
 
@@ -206,7 +195,6 @@ def fetch_openaq_sensor(
         return None
 
     df = pd.DataFrame(all_rows)
-    # Pivot: one column per parameter
     df = df.pivot_table(
         index="timestamp",
         columns="parameter",
@@ -214,22 +202,20 @@ def fetch_openaq_sensor(
         aggfunc="mean",
     ).reset_index()
 
-    # Rename columns to canonical names
     rename_map = {"pm25": "pm2_5"}
     df.rename(columns=rename_map, inplace=True)
 
-    # Flatten MultiIndex columns if any
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = ["_".join(col).strip("_") for col in df.columns]
 
-    print(f"   ✅ {param_name}: {len(df)} hourly rows")
+    print(f"   OK {param_name}: {len(df)} hourly rows")
     return df
 
 
 def fetch_openaq_all(start: str, end: str) -> Optional[pd.DataFrame]:
-    """Fetch all available parameters from OpenAQ for the given range."""
+    """Fetch all available parameters from OpenAQ."""
     if not OPENAQ_KEY:
-        print("\n⚠️  OPENAQ_API_KEY not set — skipping")
+        print("\nWARNING: OPENAQ_API_KEY not set -- skipping OpenAQ")
         return None
 
     sensor_map = discover_openaq_sensors(OPENAQ_LOCATION_ID)
@@ -241,25 +227,23 @@ def fetch_openaq_all(start: str, end: str) -> Optional[pd.DataFrame]:
 
     for param_name in desired_params:
         if param_name not in sensor_map:
-            print(f"   ⚠️  {param_name} not available at this station")
+            print(f"   WARNING: {param_name} not available at this station")
             continue
 
         sensor_id = sensor_map[param_name]
-        print(f"\n📊 Fetching {param_name} from sensor {sensor_id}: {start} → {end}")
+        print(f"\n[OpenAQ] Fetching {param_name} from sensor {sensor_id}: {start} -> {end}")
         df = fetch_openaq_sensor(sensor_id, param_name, start, end)
         if df is not None and not df.empty:
             param_dfs.append(df)
-        time.sleep(1)  # Pause between parameters
+        time.sleep(1)
 
     if not param_dfs:
         return None
 
-    # Merge all parameters on timestamp
     result = param_dfs[0]
     for df in param_dfs[1:]:
         result = pd.merge(result, df, on="timestamp", how="outer")
 
-    # Estimate AQI
     if "pm2_5" in result.columns:
         result["aqi"] = result["pm2_5"].apply(
             lambda x: round((x / 35.4) * 100, 1) if pd.notna(x) else None
@@ -269,7 +253,7 @@ def fetch_openaq_all(start: str, end: str) -> Optional[pd.DataFrame]:
     result["station_id"] = OPENAQ_LOCATION_ID
     result = result.sort_values("timestamp").reset_index(drop=True)
 
-    print(f"\n📡 OpenAQ total: {len(result)} hourly rows with observed labels")
+    print(f"\n[OpenAQ] Total: {len(result)} hourly rows with observed labels")
     return result
 
 
@@ -280,7 +264,7 @@ def merge_and_save(
     end: str,
 ) -> Path:
     """Merge weather features + observed labels and save to CSV."""
-    print(f"\n🔗 Merging weather + observed labels...")
+    print(f"\n[Merge] Combining weather + observed labels...")
 
     if observed_df is not None and not observed_df.empty:
         merged = pd.merge(weather_df, observed_df, on="timestamp", how="left")
@@ -288,7 +272,7 @@ def merge_and_save(
         print(f"   {label_count} rows with observed AQI labels")
     else:
         merged = weather_df.copy()
-        print("   No observed labels — weather only")
+        print("   No observed labels -- weather only")
 
     merged = merged.sort_values("timestamp").reset_index(drop=True)
 
@@ -296,26 +280,24 @@ def merge_and_save(
     filename = f"training_data_{start}_{end}.csv"
     path = OUTPUT_DIR / filename
     merged.to_csv(path, index=False)
-    print(f"\n💾 Saved: {path} ({len(merged)} rows × {len(merged.columns)} cols)")
+    print(f"\nSaved: {path} ({len(merged)} rows x {len(merged.columns)} cols)")
     return path
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AeroTwinML — Training Data Acquisition",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="AeroTwinML -- Training Data Acquisition",
         epilog="""
 Examples:
   python scripts/fetch_training_data.py --start 2024-01-01 --end 2026-07-25
   python scripts/fetch_training_data.py --years 2
-  python scripts/fetch_training_data.py --years 1 --provider openaq
+  python scripts/fetch_training_data.py --provider openaq --years 1
         """,
     )
     parser.add_argument("--start", type=str, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end", type=str, help="End date (YYYY-MM-DD)")
-    parser.add_argument("--years", type=float, default=2, help="Years of data to fetch (default: 2)")
-    parser.add_argument("--provider", choices=["all", "openmeteo", "openaq"], default="all",
-                        help="Which provider to fetch from")
+    parser.add_argument("--years", type=float, default=2, help="Years of data to fetch")
+    parser.add_argument("--provider", choices=["all", "openmeteo", "openaq"], default="all")
 
     args = parser.parse_args()
 
@@ -327,8 +309,8 @@ Examples:
         start_date = (datetime.now() - timedelta(days=int(args.years * 365))).strftime("%Y-%m-%d")
 
     print("=" * 60)
-    print("  AeroTwinML — Training Data Acquisition")
-    print(f"  Range: {start_date} → {end_date}")
+    print("  AeroTwinML -- Training Data Acquisition")
+    print(f"  Range: {start_date} -> {end_date}")
     print(f"  Location: {LAT}, {LON} | TZ: {TZ}")
     print("=" * 60)
 
@@ -344,7 +326,7 @@ Examples:
     if weather_df is not None:
         merge_and_save(weather_df, observed_df, start_date, end_date)
     else:
-        print("\n❌ No data fetched — check API keys and network")
+        print("\nFAILED: No data fetched -- check API keys and network")
 
 
 if __name__ == "__main__":
