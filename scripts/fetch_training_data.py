@@ -35,6 +35,8 @@ LAT = float(os.getenv("LATITUDE", "25.396"))
 LON = float(os.getenv("LONGITUDE", "68.357"))
 TZ = os.getenv("TIMEZONE", "Asia/Karachi")
 OPENAQ_KEY = os.getenv("OPENAQ_API_KEY") or os.getenv("OPEN_API_KEY", "")
+AQICN_TOKEN = os.getenv("AQICN_TOKEN", "")
+AQICN_STATION = os.getenv("AQICN_STATION", "A546205")
 OPENAQ_LOCATION_ID = int(os.getenv("OPENAQ_LOCATION_ID", "4889110"))
 OUTPUT_DIR = Path("data/backfill")
 
@@ -261,22 +263,89 @@ def fetch_openaq_all(start: str, end: str) -> Optional[pd.DataFrame]:
     return result
 
 
+def fetch_aqicn_latest() -> Optional[pd.DataFrame]:
+    """Pull latest AQICN reading — live data only, no historical API."""
+    if not AQICN_TOKEN:
+        print("\nWARNING: AQICN_TOKEN not set -- skipping AQICN")
+        return None
+
+    print(f"\n[AQICN] Fetching latest reading for station {AQICN_STATION}")
+    try:
+        url = f"https://api.waqi.info/feed/{AQICN_STATION}/"
+        resp = requests.get(url, params={"token": AQICN_TOKEN}, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("status") != "ok":
+            print(f"   AQICN API error: {data.get('data')}")
+            return None
+
+        d = data.get("data", {})
+        iaqi = d.get("iaqi", {})
+        time_info = d.get("time", {})
+
+        def _extract(obj):
+            if isinstance(obj, dict):
+                return obj.get("v")
+            return obj
+
+        ts_iso = time_info.get("iso") or time_info.get("s")
+        ts = pd.Timestamp(ts_iso).floor("h") if ts_iso else None
+
+        record = {
+            "timestamp": ts,
+            "aqi": d.get("aqi"),
+            "pm2_5": _extract(iaqi.get("pm25")),
+            "pm10": _extract(iaqi.get("pm10")),
+            "no2": _extract(iaqi.get("no2")),
+            "o3": _extract(iaqi.get("o3")),
+            "so2": _extract(iaqi.get("so2")),
+            "co": _extract(iaqi.get("co")),
+            "station_name": AQICN_STATION,
+            "source": "aqicn_live",
+        }
+        df = pd.DataFrame([record])
+        print(f"   OK AQICN: AQI={record['aqi']}, PM2.5={record['pm2_5']}, PM10={record['pm10']}")
+        return df
+    except Exception as e:
+        print(f"   FAILED: {e}")
+        return None
+
+
 def merge_and_save(
     weather_df: pd.DataFrame,
-    observed_df: Optional[pd.DataFrame],
+    openaq_df: Optional[pd.DataFrame],
+    aqicn_df: Optional[pd.DataFrame],
     start: str,
     end: str,
 ) -> Path:
-    """Merge weather features + observed labels and save to CSV."""
+    """Merge weather + OpenAQ + AQICN and save to CSV."""
     print(f"\n[Merge] Combining weather + observed labels...")
+    merged = weather_df.copy()
 
-    if observed_df is not None and not observed_df.empty:
-        merged = pd.merge(weather_df, observed_df, on="timestamp", how="left")
+    # Merge OpenAQ first (primary source, has history)
+    if openaq_df is not None and not openaq_df.empty:
+        merged = pd.merge(merged, openaq_df, on="timestamp", how="left")
         label_count = merged["aqi"].notna().sum() if "aqi" in merged.columns else 0
-        print(f"   {label_count} rows with observed AQI labels")
+        print(f"   OpenAQ: {label_count} rows with observed AQI labels")
     else:
-        merged = weather_df.copy()
-        print("   No observed labels -- weather only")
+        print("   OpenAQ: no data")
+
+    # Merge AQICN as secondary (fills gaps in OpenAQ, adds PM10/NO2/O3/SO2/CO)
+    if aqicn_df is not None and not aqicn_df.empty:
+        # Append AQICN row if its timestamp isn't already covered
+        if "timestamp" in aqicn_df.columns:
+            aqicn_df["timestamp"] = pd.to_datetime(aqicn_df["timestamp"])
+            merged = pd.merge(merged, aqicn_df, on="timestamp", how="left", suffixes=("", "_aqicn"))
+            # Fill missing values from AQICN columns
+            for col in ["aqi", "pm2_5", "pm10", "no2", "o3", "so2", "co"]:
+                aqicn_col = f"{col}_aqicn"
+                if aqicn_col in merged.columns and col in merged.columns:
+                    merged[col] = merged[col].fillna(merged[aqicn_col])
+                    merged.drop(columns=[aqicn_col], inplace=True)
+                elif aqicn_col in merged.columns:
+                    merged.rename(columns={aqicn_col: col}, inplace=True)
+        label_count = merged["aqi"].notna().sum() if "aqi" in merged.columns else 0
+        print(f"   +AQICN: {label_count} total rows with observed AQI labels")
 
     merged = merged.sort_values("timestamp").reset_index(drop=True)
 
@@ -319,18 +388,24 @@ Examples:
     print("=" * 60)
 
     weather_df = None
-    observed_df = None
+    openaq_df = None
+    aqicn_df = None
 
     if args.provider in ("all", "openmeteo"):
         weather_df = fetch_openmeteo(start_date, end_date)
 
     if args.provider in ("all", "openaq"):
-        observed_df = fetch_openaq_all(start_date, end_date)
+        openaq_df = fetch_openaq_all(start_date, end_date)
+
+    # Always pull AQICN for secondary pollutant coverage (PM10, NO2, O3, etc.)
+    aqicn_df = fetch_aqicn_latest()
 
     if weather_df is not None:
-        merge_and_save(weather_df, observed_df, start_date, end_date)
-    elif observed_df is not None:
-        merge_and_save(observed_df, None, start_date, end_date)
+        merge_and_save(weather_df, openaq_df, aqicn_df, start_date, end_date)
+    elif openaq_df is not None:
+        merge_and_save(openaq_df, None, aqicn_df, start_date, end_date)
+    elif aqicn_df is not None:
+        merge_and_save(aqicn_df, None, None, start_date, end_date)
     else:
         print("\nFAILED: No data fetched -- check API keys and network")
 
