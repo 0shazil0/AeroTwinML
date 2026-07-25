@@ -105,6 +105,8 @@ def write_feature_group(
     try:
         try:
             fg = _fs.get_feature_group(name=name, version=version)
+            if fg is None:
+                raise ValueError("get_feature_group returned None")
         except Exception:
             fg = _fs.create_feature_group(
                 name=name,
@@ -115,10 +117,14 @@ def write_feature_group(
                 online_enabled=online_enabled,
             )
             logger.info("Created feature group: %s v%d", name, version)
+            if fg is None:
+                raise ValueError("create_feature_group returned None")
 
-        fg.insert(df)
-        logger.info("Wrote %d rows to Hopsworks FG: %s v%d", len(df), name, version)
-        return True
+        if fg is not None:
+            fg.insert(df)
+            logger.info("Wrote %d rows to Hopsworks FG: %s v%d", len(df), name, version)
+            return True
+        return False
     except Exception as e:
         logger.error("Feature group write failed: %s", e)
         _save_local_fallback(name, df)
@@ -184,39 +190,25 @@ def register_model(
     try:
         import joblib
         import tempfile
-        from hsml.schema import Schema
-        from hsml.model_schema import ModelSchema
 
         # Save model to temp file
         with tempfile.NamedTemporaryFile(suffix=".pkl", delete=False) as tmp:
             joblib.dump(model_obj, tmp.name)
             model_path = tmp.name
 
-        # Create schema from input example if provided
-        input_schema = None
-        output_schema = None
-        if input_example is not None:
-            try:
-                import numpy as np
-                input_schema = Schema(np.array(input_example))
-                output_schema = Schema(np.array([0.0]))
-            except Exception:
-                pass
-
-        model_schema = ModelSchema(input_schema=input_schema, output_schema=output_schema) if input_schema else None
-
-        # Create or get model
+        # Get or create model
         try:
             hw_model = _mr.get_model(name=model_name)
+            if hw_model is None:
+                hw_model = _mr.create_model(name=model_name, description=description)
         except Exception:
             hw_model = _mr.create_model(name=model_name, description=description)
 
-        # Register new version
-        hw_model.save(
-            model_path,
-            model_schema=model_schema,
-            metrics=metrics or {},
-        )
+        if hw_model is None:
+            raise ValueError(f"Could not get or create model '{model_name}' in Hopsworks")
+
+        # Register new version — just save the file
+        hw_model.save(model_path, metrics=metrics or {})
 
         # Cleanup temp file
         os.unlink(model_path)

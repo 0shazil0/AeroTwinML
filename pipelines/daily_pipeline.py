@@ -191,10 +191,26 @@ def run_daily_pipeline() -> dict:
             logger.warning("Registry failed: %s", e)
             status["steps"]["registry"] = {"status": "warning", "detail": str(e)}
 
-        # Step 5: Save local fallback
+        # Step 5: Save local fallback AND run inference for dashboard
         if best_model is not None:
             local_path = DATA_DIR.parent / "models" / "artifacts" / f"best_model_{now_local().strftime('%Y%m%d')}.pkl"
             best_model.save(local_path)
+
+            # Also save to the standard inference path
+            import joblib
+            fallback_path = DATA_DIR.parent / "models" / "artifacts" / "aqi_forecaster_latest.pkl"
+            joblib.dump(best_model, fallback_path)
+
+            # Run inference on the latest data to produce forecast
+            try:
+                from models.inference import InferenceEngine
+                engine = InferenceEngine()
+                engine.model = best_model.model if hasattr(best_model, 'model') else best_model
+                forecast = engine.predict(train_df.tail(200))  # Use last 200 rows for lag features
+                save_json(forecast, DATA_DIR / "processed" / "predictions" / "forecast_latest.json")
+                logger.info("Forecast generated and saved")
+            except Exception as e:
+                logger.warning("Could not generate forecast: %s", e)
 
         status["success"] = True
 
