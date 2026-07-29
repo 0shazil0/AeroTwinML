@@ -190,28 +190,29 @@ def register_model(
     try:
         import joblib
         import tempfile
+        import shutil
 
         # Save model to temp dir (Hopsworks expects a directory, not a file)
-        import shutil
         tmp_dir = tempfile.mkdtemp()
         model_path = str(Path(tmp_dir) / "model.pkl")
         joblib.dump(model_obj, model_path)
 
         # Hopsworks Python Model Registry API
-        # Use mr.python.create_model() for sklearn/xgboost/boost models
         try:
             python_model = _mr.python.create_model(
                 name=model_name,
                 description=description or f"Auto-registered {model_name}",
             )
-            python_model.save(model_path, metrics=metrics or {})
-            logger.info("Model registered to Hopsworks: %s", model_name)
+            python_model.save(model_path)
+            logger.info("Model saved to Hopsworks: %s", model_name)
         except Exception as e:
-            logger.warning("Hopsworks python model save failed: %s", e)
+            logger.warning("Hopsworks model save failed: %s", e)
+            _save_model_local_fallback(model_obj, model_name)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            return None
 
         # Cleanup
         shutil.rmtree(tmp_dir, ignore_errors=True)
-
         logger.info("Model registered: %s", model_name)
         return 1
 
