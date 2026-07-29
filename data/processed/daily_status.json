@@ -1,6 +1,6 @@
 {
   "pipeline": "daily",
-  "started_at": "2026-07-29T19:52:25.462721+05:00",
+  "started_at": "2026-07-29T20:12:47.875036+05:00",
   "steps": {
     "backfill": {
       "status": "ok",
@@ -28,5 +28,5 @@
   },
   "success": true,
   "backend": "hopsworks",
-  "completed_at": "2026-07-29T19:54:27.258494+05:00"
+  "completed_at": "2026-07-29T20:15:35.340778+05:00"
 }
