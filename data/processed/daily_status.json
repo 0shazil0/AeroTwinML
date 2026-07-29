@@ -1,8 +1,32 @@
 {
   "pipeline": "daily",
-  "started_at": "2026-07-25T00:08:28.967178+05:00",
-  "steps": {},
-  "success": false,
-  "error": "'timestamp'",
-  "completed_at": "2026-07-25T00:08:34.499901+05:00"
+  "started_at": "2026-07-29T19:38:25.301798+05:00",
+  "steps": {
+    "backfill": {
+      "status": "ok",
+      "rows": 17544,
+      "range": "2024-07-28 \u2192 2026-07-28",
+      "observed_labels": "4677"
+    },
+    "features": {
+      "status": "ok",
+      "total_rows": 17544,
+      "train_rows": 4677,
+      "features": 51
+    },
+    "training": {
+      "status": "ok",
+      "best_model": "persistence",
+      "best_horizon": "24h",
+      "models_trained": 21
+    },
+    "registry": {
+      "status": "ok",
+      "model_uri": "hopsworks:/aqi_forecaster",
+      "backend": "hopsworks"
+    }
+  },
+  "success": true,
+  "backend": "hopsworks",
+  "completed_at": "2026-07-29T19:39:35.561910+05:00"
 }
