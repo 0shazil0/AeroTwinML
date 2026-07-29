@@ -1,23 +1,23 @@
 {
-  "current_aqi": 58.5,
+  "current_aqi": 99.0,
   "forecast": {
     "24h": {
-      "aqi": 58.5,
+      "aqi": 99.0,
       "category": "Moderate",
       "alert": false
     },
     "48h": {
-      "aqi": 58.5,
+      "aqi": 99.0,
       "category": "Moderate",
       "alert": false
     },
     "72h": {
-      "aqi": 58.5,
+      "aqi": 99.0,
       "category": "Moderate",
       "alert": false
     }
   },
-  "timestamp": "2026-07-29T14:54:27.258164",
+  "timestamp": "2026-07-29T15:02:51.030796",
   "model_info": {
     "type": "fallback_persistence",
     "features_used": 0
