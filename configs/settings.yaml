@@ -75,7 +75,7 @@ model_registry:
 hopsworks:
   host: eu-west.cloud.hopsworks.ai
   port: 443
-  project: AeroTwinML
+  project: AeroTwin_ML
   feature_store:
     merged_fg_name: aqi_features
     training_fg_name: aqi_training_features

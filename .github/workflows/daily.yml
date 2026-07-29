@@ -46,8 +46,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed/predictions/forecast_latest.json data/processed/pipeline_status.json data/processed/daily_status.json data/raw/logs/alerts.jsonl 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Daily pipeline update [skip ci]"
+          git add -f data/processed/predictions/forecast_latest.json data/processed/pipeline_status.json data/processed/daily_status.json
+          git commit -m "Daily pipeline update [skip ci]" || echo "No changes to commit"
           git pull --rebase origin main && git push origin main
 
       - name: Upload metrics artifact

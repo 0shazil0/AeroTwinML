@@ -25,17 +25,21 @@ env/
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
 
-# Data (CSV excluded but openaq measurement file allowed)
-*.csv
-!openaq_location_4889110_measurments*.csv
-data/**/*
-!data/**/.gitkeep
-!data/README.md
-!data/processed/predictions/forecast_latest.json
-!data/processed/pipeline_status.json
-!data/raw/logs/alerts.jsonl
+# Large data files — excluded from git
+data/raw/open_meteo/
+data/raw/aqicn/
+data/processed/merged_hourly/
+data/processed/cleaned/
+data/processed/features/
+data/backfill/
+data/quality/
+data/raw/logs/alerts.jsonl
+
+# Small data files — ALLOWED for dashboard (Render reads these)
+# data/processed/predictions/forecast_latest.json  ← tracked
+# data/processed/pipeline_status.json               ← tracked
+# data/processed/daily_status.json                   ← tracked
 
 # Model artifacts
 models/artifacts/
@@ -56,7 +60,6 @@ htmlcov/
 
 # Logs
 *.log
-data/raw/logs/*.log
 
 # Docker
 .docker/

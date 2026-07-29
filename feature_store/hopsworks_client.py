@@ -33,7 +33,7 @@ def _connect():
         return
 
     api_key = os.getenv("HOPSWORKS_API_KEY") or ""
-    project_name = os.getenv("HOPSWORKS_PROJECT") or "AeroTwinML"
+    project_name = os.getenv("HOPSWORKS_PROJECT") or "AeroTwin_ML"
     host = os.getenv("HOPSWORKS_HOST") or "eu-west.cloud.hopsworks.ai"
 
     if not api_key:

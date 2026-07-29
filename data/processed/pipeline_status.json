@@ -1,0 +1,1 @@
+{"city": "Hyderabad", "timezone": "Asia/Karachi", "pipeline": {"hourly_pipeline": null, "daily_pipeline": {"pipeline": "daily", "started_at": "2026-07-29T18:47:01+05:00", "success": true, "backend": "local"}, "data_freshness": {"latest_timestamp": "2026-07-29T18:47:36+05:00", "status": "healthy"}}}
