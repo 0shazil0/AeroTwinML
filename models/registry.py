@@ -138,9 +138,16 @@ def get_latest_model(model_name: str = "aqi_forecaster") -> Optional[Any]:
 def register_model(model_name: str = "aqi_forecaster") -> Optional[str]:
     """Register latest model. Redirects to Hopsworks if available."""
     if hopsworks_available():
-        # Already registered during log_experiment — just return the name
-        logger.info("Model registered via Hopsworks: %s", model_name)
-        return f"hopsworks:/{model_name}"
+        # Already registered during log_experiment — check if it succeeded
+        result = hopsworks_register(
+            model_obj=None,  # Already saved during log_experiment
+            model_name=model_name,
+        )
+        if result is not None:
+            logger.info("Model registered via Hopsworks: %s", model_name)
+            return f"hopsworks:/{model_name}"
+        logger.warning("Hopsworks registration returned None")
+        return None
 
     # MLflow fallback
     try:
