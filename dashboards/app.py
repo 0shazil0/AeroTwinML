@@ -110,22 +110,30 @@ def home():
         "updated_at": forecast.get("timestamp"),
     }
 
-    # Weather from latest merged row
-    weather = None
-    if merged:
-        latest = merged[-1]
-        weather = {
-            "temperature": latest.get("temperature_2m"),
-            "humidity": latest.get("relative_humidity_2m"),
-            "pressure": latest.get("pressure_msl"),
-            "wind_speed": latest.get("wind_speed_10m"),
-            "wind_direction": latest.get("wind_direction_10m"),
-            "precipitation": latest.get("precipitation"),
-            "cloud_cover": latest.get("cloud_cover"),
-        }
-        aqi_data["pm2_5"] = latest.get("pm2_5")
-        aqi_data["pm10"] = latest.get("pm10")
-        aqi_data["dominant_pollutant"] = latest.get("dominant_pollutant", "PM2.5")
+    # Weather from forecast JSON (embedded by daily pipeline) or from merged parquet
+    weather = forecast.get("weather")
+    if weather is None:
+        merged = _load_merged(hours=1)
+        if merged:
+            latest = merged[-1]
+            weather = {
+                "temperature": latest.get("temperature_2m"),
+                "humidity": latest.get("relative_humidity_2m"),
+                "pressure": latest.get("pressure_msl"),
+                "wind_speed": latest.get("wind_speed_10m"),
+                "wind_direction": latest.get("wind_direction_10m"),
+                "precipitation": latest.get("precipitation"),
+                "cloud_cover": latest.get("cloud_cover"),
+            }
+            aqi_data["pm2_5"] = latest.get("pm2_5")
+            aqi_data["pm10"] = latest.get("pm10")
+            aqi_data["dominant_pollutant"] = latest.get("dominant_pollutant", "PM2.5")
+
+    # Pollutant data from forecast JSON if available
+    forecast_pollutants = forecast.get("pollutants", {})
+    if forecast_pollutants:
+        aqi_data["pm2_5"] = forecast_pollutants.get("pm2_5") or aqi_data.get("pm2_5")
+        aqi_data["pm10"] = forecast_pollutants.get("pm10") or aqi_data.get("pm10")
 
     aqi_data["weather"] = weather
 

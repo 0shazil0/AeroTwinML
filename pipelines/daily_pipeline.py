@@ -207,6 +207,27 @@ def run_daily_pipeline() -> dict:
                 engine = InferenceEngine()
                 engine.model = best_model.model if hasattr(best_model, 'model') else best_model
                 forecast = engine.predict(train_df.tail(200))  # Use last 200 rows for lag features
+
+                # Embed weather + pollutant data into forecast for dashboard
+                latest_row = train_df.iloc[-1] if len(train_df) > 0 else None
+                if latest_row is not None:
+                    forecast["weather"] = {
+                        "temperature": latest_row.get("temperature_2m"),
+                        "humidity": latest_row.get("relative_humidity_2m"),
+                        "pressure": latest_row.get("pressure_msl"),
+                        "wind_speed": latest_row.get("wind_speed_10m"),
+                        "wind_direction": latest_row.get("wind_direction_10m"),
+                        "precipitation": latest_row.get("precipitation"),
+                        "cloud_cover": latest_row.get("cloud_cover"),
+                    }
+                    forecast["pollutants"] = {
+                        "pm2_5": latest_row.get("pm2_5"),
+                        "pm10": latest_row.get("pm10"),
+                        "no2": latest_row.get("no2"),
+                        "o3": latest_row.get("o3"),
+                    }
+                    forecast["station"] = latest_row.get("station_name", "OpenAQ/4889110")
+
                 save_json(forecast, DATA_DIR / "processed" / "predictions" / "forecast_latest.json")
                 logger.info("Forecast generated and saved")
             except Exception as e:
