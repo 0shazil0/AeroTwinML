@@ -1,25 +1,41 @@
 {
-  "current_aqi": 96.0,
+  "current_aqi": 63.8,
   "forecast": {
     "24h": {
-      "aqi": 96.0,
+      "aqi": 63.8,
       "category": "Moderate",
       "alert": false
     },
     "48h": {
-      "aqi": 96.0,
+      "aqi": 63.8,
       "category": "Moderate",
       "alert": false
     },
     "72h": {
-      "aqi": 96.0,
+      "aqi": 63.8,
       "category": "Moderate",
       "alert": false
     }
   },
-  "timestamp": "2026-07-31T17:15:55.734319",
+  "timestamp": "2026-07-31T17:45:48.137989",
   "model_info": {
     "type": "fallback_persistence",
     "features_used": 0
-  }
+  },
+  "weather": {
+    "temperature": 29.4,
+    "humidity": "76",
+    "pressure": 999.0,
+    "wind_speed": 14.5,
+    "wind_direction": "217",
+    "precipitation": 0.0,
+    "cloud_cover": "65"
+  },
+  "pollutants": {
+    "pm2_5": 22.6,
+    "pm10": NaN,
+    "no2": NaN,
+    "o3": NaN
+  },
+  "station": NaN
 }
