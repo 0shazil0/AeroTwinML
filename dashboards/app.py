@@ -196,16 +196,32 @@ def analytics():
 
 @app.route("/explainability")
 def explainability():
-    # Correlation-based explanation as fallback
+    # Try forecast JSON first (always available), then parquet fallback
+    forecast = _load_forecast()
     merged = _load_merged(hours=168)
     explanation = {"top_drivers": [], "natural_language": "", "method": "none"}
 
+    # Build a DataFrame from whatever data is available
+    df = None
     if merged:
         df = pd.DataFrame(merged)
+    elif forecast:
+        # Build single-row DataFrame from embedded forecast data
+        row = {}
+        if forecast.get("current_aqi"):
+            row["aqi"] = forecast["current_aqi"]
+        if forecast.get("weather"):
+            row.update(forecast["weather"])
+        if forecast.get("pollutants"):
+            row.update(forecast["pollutants"])
+        if row:
+            df = pd.DataFrame([row])
+
+    if df is not None and len(df) > 1:
         aqi_col = "aqi" if "aqi" in df.columns else "om_forecast_aqi"
         if aqi_col in df.columns:
             numeric = df.select_dtypes(include=[np.number])
-            if aqi_col in numeric.columns and len(numeric) > 1:
+            if aqi_col in numeric.columns:
                 corr = numeric.corr()[aqi_col].dropna().drop(aqi_col, errors="ignore")
                 drivers = []
                 for feat, val in corr.abs().sort_values(ascending=False).head(10).items():
