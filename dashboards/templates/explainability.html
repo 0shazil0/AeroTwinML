@@ -34,7 +34,7 @@
                 </span>
                 <span style="flex: 1; font-size: 13px; font-weight: 500;">{{ driver.feature | replace('_', ' ') | title }}</span>
                 <span style="font-size: 13px; font-weight: 600; color: var(--accent-cyan);">
-                    {{ (driver.importance or driver.shap_value or driver.weight) | round(4) }}
+                    {{ (driver.importance or driver.shap_value or driver.weight) | float | round(4) }}
                 </span>
             </div>
             {% endfor %}

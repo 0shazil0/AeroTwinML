@@ -225,6 +225,9 @@ def register_model(
 def get_latest_model(model_name: str = "aqi_forecaster") -> Optional[Any]:
     """Load the latest model version from Hopsworks Model Registry.
 
+    Tries the Python model registry first (matches how models are registered),
+    then falls back to the generic model registry.
+
     Args:
         model_name: Model name to load
 
@@ -235,6 +238,22 @@ def get_latest_model(model_name: str = "aqi_forecaster") -> Optional[Any]:
     if _mr is None:
         return _load_model_local_fallback(model_name)
 
+    import joblib
+
+    # Tier 1: Python model registry (matches registration via _mr.python.create_model)
+    try:
+        python_models = _mr.python.get_model(name=model_name)
+        if python_models is not None:
+            model_dir = python_models.download()
+            model_files = list(Path(model_dir).glob("*.pkl"))
+            if model_files:
+                model = joblib.load(str(model_files[0]))
+                logger.info("Loaded Python model from Hopsworks: %s", model_name)
+                return model
+    except Exception as e:
+        logger.debug("Python model registry lookup failed: %s", e)
+
+    # Tier 2: Generic model registry
     try:
         hw_model = _mr.get_model(name=model_name)
         versions = hw_model.versions
@@ -245,19 +264,11 @@ def get_latest_model(model_name: str = "aqi_forecaster") -> Optional[Any]:
         latest = sorted(versions, key=lambda v: v.version)[-1]
         model_dir = latest.download()
 
-        import joblib
         model_files = list(Path(model_dir).glob("*.pkl"))
         if model_files:
             model = joblib.load(str(model_files[0]))
             logger.info("Loaded model from Hopsworks: %s v%d", model_name, latest.version)
             return model
-
-        # Try sklearn
-        try:
-            from hsml import sklearn
-            return None  # hsml loading handled differently
-        except Exception:
-            pass
 
         return _load_model_local_fallback(model_name)
 

@@ -7,7 +7,11 @@ Inference uses model from Hopsworks Model Registry (with local fallback).
 
 import json
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 from feature_store.feature_builder import FeatureBuilder
 from feature_store.hopsworks_client import (
@@ -19,13 +23,14 @@ from models.inference import InferenceEngine
 from utils.aqi_utils import is_alert_level
 from utils.config import get
 from utils.logging import setup_logger
-from utils.storage import save_json, save_parquet
+from utils.storage import save_json, save_parquet, load_parquet
 from utils.time_utils import format_iso, now_local
 
 logger = setup_logger("hourly_pipeline")
 
 DATA_DIR = Path(get("storage.data_dir", "./data"))
 PREDICTIONS_DIR = DATA_DIR / "processed" / "predictions"
+MERGED_DIR = DATA_DIR / "processed" / "merged_hourly"
 ALERTS_FILE = DATA_DIR / "raw" / "logs" / "alerts.jsonl"
 STATUS_FILE = DATA_DIR / "processed" / "pipeline_status.json"
 
@@ -87,6 +92,13 @@ def run_hourly_pipeline() -> dict:
         logger.info("=== Step 3: Inference ===")
         engine = InferenceEngine()
         forecast = engine.predict(featured)
+
+        # Embed weather + pollutant data from the latest merged row
+        _embed_weather_and_pollutants(forecast, merged)
+
+        # Embed 7-day history for dashboard (avoids needing parquet on deployment)
+        _embed_history(forecast)
+
         forecast_path = PREDICTIONS_DIR / f"forecast_{now_local().strftime('%Y%m%d_%H')}.json"
         save_json(forecast, forecast_path)
         save_json(forecast, PREDICTIONS_DIR / "forecast_latest.json")
@@ -174,6 +186,104 @@ def _quality_check(df) -> dict:
 def _save_status(status: dict):
     STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
     save_json(status, STATUS_FILE)
+
+
+def _to_json_safe(v):
+    """Convert numpy/pandas types to JSON-safe Python types."""
+    if isinstance(v, (np.integer,)):
+        return int(v)
+    if isinstance(v, (np.floating,)):
+        return float(v) if pd.notna(v) else None
+    if isinstance(v, (np.bool_,)):
+        return bool(v)
+    if isinstance(v, pd.Timestamp):
+        return v.isoformat()
+    if pd.isna(v):
+        return None
+    # Ensure strings that look like numbers are converted to numbers
+    if isinstance(v, str):
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return v
+    return v
+
+
+def _embed_weather_and_pollutants(forecast: dict, merged: pd.DataFrame):
+    """Extract weather + pollutant data from the latest merged row and embed in forecast."""
+    if merged.empty:
+        return
+
+    latest = merged.iloc[-1]
+
+    forecast["weather"] = {
+        "temperature": _to_json_safe(latest.get("temperature_2m")),
+        "humidity": _to_json_safe(latest.get("relative_humidity_2m")),
+        "pressure": _to_json_safe(latest.get("pressure_msl")),
+        "wind_speed": _to_json_safe(latest.get("wind_speed_10m")),
+        "wind_direction": _to_json_safe(latest.get("wind_direction_10m")),
+        "precipitation": _to_json_safe(latest.get("precipitation")),
+        "cloud_cover": _to_json_safe(latest.get("cloud_cover")),
+    }
+
+    forecast["pollutants"] = {
+        "pm2_5": _to_json_safe(latest.get("pm2_5")),
+        "pm10": _to_json_safe(latest.get("pm10")),
+        "no2": _to_json_safe(latest.get("no2")),
+        "o3": _to_json_safe(latest.get("o3")),
+        "so2": _to_json_safe(latest.get("so2")),
+        "co": _to_json_safe(latest.get("co")),
+    }
+
+    forecast["station"] = str(latest.get("station_name", "OpenAQ/4889110"))
+    logger.info("Embedded weather + pollutant data in forecast JSON")
+
+
+def _embed_history(forecast: dict, hours: int = 168):
+    """Load merged parquet and embed last N hours as compact history array.
+
+    This lets the dashboard show historical trends without needing the parquet file
+    on the deployment platform.
+    """
+    merged_path = MERGED_DIR / "merged_latest.parquet"
+    try:
+        if not merged_path.exists():
+            return
+
+        df = pd.read_parquet(merged_path)
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            # Use tz-aware cutoff to match tz-aware parquet timestamps
+            cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
+            if df["timestamp"].dt.tz is None:
+                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
+            else:
+                df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
+            df = df[df["timestamp"] >= cutoff]
+
+        # Only keep columns the dashboard needs
+        keep_cols = [
+            "timestamp", "aqi", "pm2_5", "pm10", "no2", "o3", "so2", "co",
+            "temperature_2m", "relative_humidity_2m", "pressure_msl",
+            "wind_speed_10m", "wind_direction_10m", "precipitation", "cloud_cover",
+            "om_forecast_aqi", "dominant_pollutant",
+        ]
+        available = [c for c in keep_cols if c in df.columns]
+        df = df[available].tail(hours * 2)
+
+        # Convert to JSON-safe records
+        records = []
+        for _, row in df.iterrows():
+            rec = {}
+            for col in available:
+                rec[col] = _to_json_safe(row[col])
+            records.append(rec)
+
+        forecast["history"] = records
+        logger.info("Embedded %d history rows in forecast JSON", len(records))
+
+    except Exception as e:
+        logger.warning("Could not embed history: %s", e)
 
 
 if __name__ == "__main__":

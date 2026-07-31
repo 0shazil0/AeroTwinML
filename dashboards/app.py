@@ -38,6 +38,16 @@ DAILY_PATH = DATA_DIR / "processed" / "daily_status.json"
 ALERTS_PATH = DATA_DIR / "raw" / "logs" / "alerts.jsonl"
 
 
+@app.errorhandler(500)
+def internal_error(e):
+    logger.error("Internal server error: %s", e)
+    return render_template("index.html",
+        aqi={"aqi": None, "category": "No Data", "category_color": "#666",
+             "health_advice": "Dashboard encountered an error. Data will refresh on next pipeline run.",
+             "weather": None, "pm2_5": None, "pm10": None, "dominant_pollutant": "--", "updated_at": None},
+        forecast={}, alerts=[], city=get("city.name", "Hyderabad")), 200
+
+
 def _load_json(path: Path) -> dict:
     try:
         with open(path) as f:
@@ -50,12 +60,48 @@ def _load_forecast() -> dict:
     return _load_json(FORECAST_PATH)
 
 
+def _load_history_from_forecast(hours: int = 168) -> list:
+    """Load history from forecast JSON's embedded history array.
+
+    This is the primary source when parquet is unavailable (e.g. on deployment).
+    """
+    try:
+        forecast = _load_forecast()
+        history = forecast.get("history", [])
+        if not history:
+            return []
+
+        # Filter to requested time window — use pd.Timestamp for timezone-safe comparison
+        cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
+        filtered = []
+        for r in history:
+            ts = r.get("timestamp")
+            if ts:
+                try:
+                    dt = pd.Timestamp(ts).tz_convert("UTC") if pd.Timestamp(ts).tzinfo else pd.Timestamp(ts, tz="UTC")
+                    if dt >= cutoff:
+                        filtered.append(r)
+                except Exception:
+                    filtered.append(r)
+            else:
+                filtered.append(r)
+        return filtered
+    except Exception:
+        return []
+
+
 def _load_merged(hours: int = 168) -> list:
+    """Load history data — tries parquet first, falls back to forecast JSON."""
     try:
         df = pd.read_parquet(MERGED_PATH)
         if "timestamp" in df.columns:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
-            cutoff = datetime.now() - timedelta(hours=hours)
+            cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
+            # Ensure timestamps are tz-aware for comparison
+            if df["timestamp"].dt.tz is None:
+                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
+            else:
+                df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
             df = df[df["timestamp"] >= cutoff]
         # Convert to JSON-safe format
         records = df.tail(hours * 2).to_dict(orient="records")
@@ -71,7 +117,8 @@ def _load_merged(hours: int = 168) -> list:
                     r[k] = None
         return records
     except (FileNotFoundError, Exception):
-        return []
+        # Fallback: read from embedded history in forecast JSON
+        return _load_history_from_forecast(hours)
 
 
 def _load_alerts(limit: int = 10) -> list:
@@ -204,44 +251,56 @@ def explainability():
     # Build a DataFrame from whatever data is available
     df = None
     if merged:
-        df = pd.DataFrame(merged)
-    elif forecast:
+        try:
+            df = pd.DataFrame(merged)
+        except Exception:
+            df = None
+
+    if df is None or df.empty:
         # Build single-row DataFrame from embedded forecast data
-        row = {}
-        if forecast.get("current_aqi"):
-            row["aqi"] = forecast["current_aqi"]
-        if forecast.get("weather"):
-            row.update(forecast["weather"])
-        if forecast.get("pollutants"):
-            row.update(forecast["pollutants"])
-        if row:
-            df = pd.DataFrame([row])
+        if forecast:
+            row = {}
+            if forecast.get("current_aqi"):
+                row["aqi"] = forecast["current_aqi"]
+            if forecast.get("weather"):
+                for k, v in forecast["weather"].items():
+                    if v is not None:
+                        row[k] = v
+            if forecast.get("pollutants"):
+                for k, v in forecast["pollutants"].items():
+                    if v is not None:
+                        row[k] = v
+            if row:
+                df = pd.DataFrame([row])
 
     if df is not None and len(df) > 1:
         aqi_col = "aqi" if "aqi" in df.columns else "om_forecast_aqi"
         if aqi_col in df.columns:
             numeric = df.select_dtypes(include=[np.number])
             if aqi_col in numeric.columns:
-                corr = numeric.corr()[aqi_col].dropna().drop(aqi_col, errors="ignore")
-                drivers = []
-                for feat, val in corr.abs().sort_values(ascending=False).head(10).items():
-                    drivers.append({
-                        "feature": feat,
-                        "importance": round(abs(val), 4),
-                        "correlation": round(corr[feat], 4),
-                        "direction": "positive" if corr[feat] > 0 else "negative",
-                    })
-                top = drivers[0] if drivers else None
-                nl = ""
-                if top:
-                    direction = "increase" if top["direction"] == "positive" else "decrease"
-                    nl = f"AQI shows the strongest correlation with {top['feature'].replace('_',' ')} (r={top['correlation']:.3f}, {direction})."
-                explanation = {
-                    "top_drivers": drivers,
-                    "natural_language": nl,
-                    "global_importance": drivers,
-                    "method": "correlation",
-                }
+                try:
+                    corr = numeric.corr()[aqi_col].dropna().drop(aqi_col, errors="ignore")
+                    drivers = []
+                    for feat, val in corr.abs().sort_values(ascending=False).head(10).items():
+                        drivers.append({
+                            "feature": feat,
+                            "importance": round(abs(val), 4),
+                            "correlation": round(corr[feat], 4),
+                            "direction": "positive" if corr[feat] > 0 else "negative",
+                        })
+                    top = drivers[0] if drivers else None
+                    nl = ""
+                    if top:
+                        direction = "increase" if top["direction"] == "positive" else "decrease"
+                        nl = f"AQI shows the strongest correlation with {top['feature'].replace('_',' ')} (r={top['correlation']:.3f}, {direction})."
+                    explanation = {
+                        "top_drivers": drivers,
+                        "natural_language": nl,
+                        "global_importance": drivers,
+                        "method": "correlation",
+                    }
+                except Exception:
+                    pass
 
     return render_template(
         "explainability.html",
@@ -256,7 +315,7 @@ def pipeline():
     hourly = _load_json(PIPELINE_PATH)
     daily = _load_json(DAILY_PATH)
 
-    # Data freshness
+    # Data freshness — try parquet first, fall back to forecast JSON timestamp
     freshness = "no_data"
     if MERGED_PATH.exists():
         try:
@@ -266,6 +325,12 @@ def pipeline():
                 freshness = latest_ts
         except Exception:
             pass
+
+    if freshness == "no_data":
+        forecast = _load_forecast()
+        ts = forecast.get("timestamp")
+        if ts:
+            freshness = ts
 
     return render_template(
         "pipeline.html",

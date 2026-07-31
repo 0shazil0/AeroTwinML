@@ -233,6 +233,21 @@ def run_daily_pipeline() -> dict:
             except Exception as e:
                 logger.warning("Could not generate forecast: %s", e)
 
+        # Step 6: Embed history into forecast JSON for dashboard
+        logger.info("=== Step 6: Embed History for Dashboard ===")
+        try:
+            from pipelines.hourly_pipeline import _embed_history
+            forecast_path = DATA_DIR / "processed" / "predictions" / "forecast_latest.json"
+            if forecast_path.exists():
+                import json as _json
+                with open(forecast_path) as _f:
+                    fc = _json.load(_f)
+                _embed_history(fc)
+                save_json(fc, forecast_path)
+                logger.info("Embedded history into daily forecast JSON")
+        except Exception as e:
+            logger.warning("Could not embed history: %s", e)
+
         status["success"] = True
 
     except Exception as e:

@@ -6,7 +6,7 @@
     <!-- Hero AQI -->
     <div class="hero-aqi {% if aqi.aqi and aqi.aqi >= 200 %}danger{% endif %}">
         <div class="aqi-number" style="color: {{ aqi.category_color or '#00e400' }};" id="aqi-display">
-            {{ aqi.aqi | round(0) if aqi.aqi else '--' }}
+            {{ aqi.aqi | float | round(0) if aqi.aqi else '--' }}
         </div>
         <div class="aqi-label" style="color: {{ aqi.category_color or '#00e400' }};">
             {{ aqi.category or 'No Data' }}
@@ -22,19 +22,19 @@
         {% if aqi.weather %}
         <div class="grid-2">
             <div class="stat-card">
-                <div class="stat-value">{{ aqi.weather.temperature | round(1) if aqi.weather.temperature else '--' }}°</div>
+                <div class="stat-value">{{ aqi.weather.temperature | float | round(1) if aqi.weather.temperature else '--' }}°</div>
                 <div class="stat-label">Temperature</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">{{ aqi.weather.humidity | round(0) if aqi.weather.humidity else '--' }}%</div>
+                <div class="stat-value">{{ aqi.weather.humidity | float | round(0) if aqi.weather.humidity else '--' }}%</div>
                 <div class="stat-label">Humidity</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">{{ aqi.weather.wind_speed | round(1) if aqi.weather.wind_speed else '--' }}</div>
+                <div class="stat-value">{{ aqi.weather.wind_speed | float | round(1) if aqi.weather.wind_speed else '--' }}</div>
                 <div class="stat-label">Wind (m/s)</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">{{ aqi.weather.pressure | round(0) if aqi.weather.pressure else '--' }}</div>
+                <div class="stat-value">{{ aqi.weather.pressure | float | round(0) if aqi.weather.pressure else '--' }}</div>
                 <div class="stat-label">Pressure (hPa)</div>
             </div>
         </div>
@@ -49,11 +49,11 @@
 <!-- Quick Stats Row -->
 <div class="grid-4" style="margin-bottom: 24px;">
     <div class="card stat-card">
-        <div class="stat-value">{{ aqi.pm2_5 | round(1) if aqi.pm2_5 else '--' }}</div>
+        <div class="stat-value">{{ aqi.pm2_5 | float | round(1) if aqi.pm2_5 else '--' }}</div>
         <div class="stat-label">PM2.5 (μg/m³)</div>
     </div>
     <div class="card stat-card">
-        <div class="stat-value">{{ aqi.pm10 | round(1) if aqi.pm10 else '--' }}</div>
+        <div class="stat-value">{{ aqi.pm10 | float | round(1) if aqi.pm10 else '--' }}</div>
         <div class="stat-label">PM10 (μg/m³)</div>
     </div>
     <div class="card stat-card">
@@ -134,7 +134,7 @@
 
     // Check for alerts
     {% if aqi.aqi and aqi.aqi >= 200 %}
-    showAlert('⚠ Hazardous Air Quality Alert: AQI is {{ aqi.aqi | round(0) }} — {{ aqi.category }}');
+    showAlert('⚠ Hazardous Air Quality Alert: AQI is {{ aqi.aqi | float | round(0) }} — {{ aqi.category }}');
     {% endif %}
 </script>
 {% endblock %}
