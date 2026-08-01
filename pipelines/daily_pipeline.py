@@ -205,7 +205,7 @@ def run_daily_pipeline() -> dict:
             try:
                 from models.inference import InferenceEngine
                 engine = InferenceEngine()
-                engine.model = best_model.model if hasattr(best_model, 'model') else best_model
+                engine.model = best_model  # Use full wrapper (baselines have .model=None)
                 forecast = engine.predict(train_df.tail(200))  # Use last 200 rows for lag features
 
                 # Embed weather + pollutant data into forecast for dashboard

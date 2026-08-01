@@ -42,7 +42,8 @@ data/raw/logs/alerts.jsonl
 # data/processed/daily_status.json                   ← tracked
 
 # Model artifacts
-models/artifacts/
+models/artifacts/*
+!models/artifacts/aqi_forecaster_latest.pkl
 mlruns/
 mlartifacts/
 

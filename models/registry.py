@@ -54,10 +54,10 @@ def log_experiment(
         log_metrics_to_store(flat_metrics, run_name)
 
         # Register best model to Hopsworks Model Registry
+        # Always save the full BaseModel wrapper (not .model which is None for baselines)
         if best_model is not None:
-            underlying = best_model.model if hasattr(best_model, "model") else best_model
             hopsworks_register(
-                model_obj=underlying,
+                model_obj=best_model,
                 model_name="aqi_forecaster",
                 metrics={"rmse_24h": flat_metrics.get("24h_persistence_rmse_24h", 0)},
                 description=f"Trained on {len(feature_cols)} features, best: {best_mname} @ {best_horizon}",
@@ -128,6 +128,11 @@ def get_latest_model(model_name: str = "aqi_forecaster") -> Optional[Any]:
 
     # Tier 3: Local fallback
     import joblib
+    # Try the latest model first (committed to git by daily pipeline)
+    latest_path = MODEL_DIR / "aqi_forecaster_latest.pkl"
+    if latest_path.exists():
+        return joblib.load(str(latest_path))
+    # Fall back to date-stamped models
     local_paths = sorted(MODEL_DIR.glob("best_model_*.pkl"), reverse=True)
     if local_paths:
         return joblib.load(local_paths[0])
