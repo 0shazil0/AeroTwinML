@@ -1,23 +1,23 @@
 {
-  "current_aqi": 86.0,
+  "current_aqi": 82.0,
   "forecast": {
     "24h": {
-      "aqi": 86.0,
+      "aqi": 82.0,
       "category": "Moderate",
       "alert": false
     },
     "48h": {
-      "aqi": 86.0,
+      "aqi": 82.0,
       "category": "Moderate",
       "alert": false
     },
     "72h": {
-      "aqi": 86.0,
+      "aqi": 82.0,
       "category": "Moderate",
       "alert": false
     }
   },
-  "timestamp": "2026-08-01T22:42:21.174888",
+  "timestamp": "2026-08-01T23:45:42.834496",
   "model_info": {
     "type": "fallback_persistence",
     "features_used": 0
@@ -57,7 +57,7 @@
       "wind_direction_10m": 227,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 96.0,
+      "om_forecast_aqi": 99.0,
       "dominant_pollutant": null
     },
     {
@@ -76,7 +76,7 @@
       "wind_direction_10m": 228,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 96.0,
+      "om_forecast_aqi": 99.0,
       "dominant_pollutant": null
     },
     {
@@ -95,7 +95,7 @@
       "wind_direction_10m": 229,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 96.0,
+      "om_forecast_aqi": 99.0,
       "dominant_pollutant": null
     },
     {
@@ -114,7 +114,7 @@
       "wind_direction_10m": 229,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 95.0,
+      "om_forecast_aqi": 99.0,
       "dominant_pollutant": null
     },
     {
@@ -133,7 +133,7 @@
       "wind_direction_10m": 202,
       "precipitation": 0.1,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 95.0,
+      "om_forecast_aqi": 98.0,
       "dominant_pollutant": null
     },
     {
@@ -152,7 +152,7 @@
       "wind_direction_10m": 243,
       "precipitation": 0.1,
       "cloud_cover": 91.0,
-      "om_forecast_aqi": 94.0,
+      "om_forecast_aqi": 98.0,
       "dominant_pollutant": null
     },
     {
@@ -171,7 +171,7 @@
       "wind_direction_10m": 262,
       "precipitation": 0.1,
       "cloud_cover": 91.0,
-      "om_forecast_aqi": 94.0,
+      "om_forecast_aqi": 98.0,
       "dominant_pollutant": null
     },
     {
@@ -190,7 +190,7 @@
       "wind_direction_10m": 253,
       "precipitation": 0.0,
       "cloud_cover": 38.0,
-      "om_forecast_aqi": 93.0,
+      "om_forecast_aqi": 97.0,
       "dominant_pollutant": null
     },
     {
@@ -209,7 +209,7 @@
       "wind_direction_10m": 251,
       "precipitation": 0.0,
       "cloud_cover": 80.0,
-      "om_forecast_aqi": 92.0,
+      "om_forecast_aqi": 96.0,
       "dominant_pollutant": null
     },
     {
@@ -228,7 +228,7 @@
       "wind_direction_10m": 233,
       "precipitation": 0.0,
       "cloud_cover": 80.0,
-      "om_forecast_aqi": 91.0,
+      "om_forecast_aqi": 95.0,
       "dominant_pollutant": null
     },
     {
@@ -247,7 +247,7 @@
       "wind_direction_10m": 188,
       "precipitation": 0.9,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 89.0,
+      "om_forecast_aqi": 93.0,
       "dominant_pollutant": null
     },
     {
@@ -266,7 +266,7 @@
       "wind_direction_10m": 253,
       "precipitation": 2.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 88.0,
+      "om_forecast_aqi": 91.0,
       "dominant_pollutant": null
     },
     {
@@ -285,7 +285,7 @@
       "wind_direction_10m": 226,
       "precipitation": 1.7,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 86.0,
+      "om_forecast_aqi": 89.0,
       "dominant_pollutant": null
     },
     {
@@ -304,7 +304,7 @@
       "wind_direction_10m": 197,
       "precipitation": 1.2,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 85.0,
+      "om_forecast_aqi": 88.0,
       "dominant_pollutant": null
     },
     {
@@ -323,7 +323,7 @@
       "wind_direction_10m": 210,
       "precipitation": 0.3,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 84.0,
+      "om_forecast_aqi": 86.0,
       "dominant_pollutant": null
     },
     {
@@ -342,7 +342,7 @@
       "wind_direction_10m": 214,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 83.0,
+      "om_forecast_aqi": 85.0,
       "dominant_pollutant": null
     },
     {
@@ -361,7 +361,7 @@
       "wind_direction_10m": 214,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 82.0,
+      "om_forecast_aqi": 84.0,
       "dominant_pollutant": null
     },
     {
@@ -380,7 +380,7 @@
       "wind_direction_10m": 222,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 81.0,
+      "om_forecast_aqi": 83.0,
       "dominant_pollutant": null
     },
     {
@@ -399,7 +399,7 @@
       "wind_direction_10m": 230,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 80.0,
+      "om_forecast_aqi": 82.0,
       "dominant_pollutant": null
     },
     {
@@ -418,7 +418,7 @@
       "wind_direction_10m": 223,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 80.0,
       "dominant_pollutant": null
     },
     {
@@ -437,7 +437,7 @@
       "wind_direction_10m": 225,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 79.0,
       "dominant_pollutant": null
     },
     {
@@ -475,7 +475,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 95.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -494,7 +494,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -513,7 +513,7 @@
       "wind_direction_10m": 230,
       "precipitation": 0.0,
       "cloud_cover": 98.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 75.0,
       "dominant_pollutant": null
     },
     {
@@ -532,7 +532,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 77.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 75.0,
       "dominant_pollutant": null
     },
     {
@@ -551,7 +551,7 @@
       "wind_direction_10m": 229,
       "precipitation": 0.0,
       "cloud_cover": 38.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -570,7 +570,7 @@
       "wind_direction_10m": 226,
       "precipitation": 0.0,
       "cloud_cover": 73.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -589,7 +589,7 @@
       "wind_direction_10m": 227,
       "precipitation": 0.0,
       "cloud_cover": 97.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 73.0,
       "dominant_pollutant": null
     },
     {
@@ -608,7 +608,7 @@
       "wind_direction_10m": 224,
       "precipitation": 0.0,
       "cloud_cover": 74.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 73.0,
       "dominant_pollutant": null
     },
     {
@@ -627,7 +627,7 @@
       "wind_direction_10m": 224,
       "precipitation": 0.0,
       "cloud_cover": 85.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 73.0,
       "dominant_pollutant": null
     },
     {
@@ -646,7 +646,7 @@
       "wind_direction_10m": 221,
       "precipitation": 0.0,
       "cloud_cover": 52.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 72.0,
       "dominant_pollutant": null
     },
     {
@@ -665,7 +665,7 @@
       "wind_direction_10m": 229,
       "precipitation": 0.0,
       "cloud_cover": 51.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 72.0,
       "dominant_pollutant": null
     },
     {
@@ -684,7 +684,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 77.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 73.0,
       "dominant_pollutant": null
     },
     {
@@ -703,7 +703,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 58.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 73.0,
       "dominant_pollutant": null
     },
     {
@@ -722,7 +722,7 @@
       "wind_direction_10m": 229,
       "precipitation": 0.0,
       "cloud_cover": 9.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 73.0,
       "dominant_pollutant": null
     },
     {
@@ -741,7 +741,7 @@
       "wind_direction_10m": 225,
       "precipitation": 0.0,
       "cloud_cover": 62.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -760,7 +760,7 @@
       "wind_direction_10m": 222,
       "precipitation": 0.0,
       "cloud_cover": 32.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -779,7 +779,7 @@
       "wind_direction_10m": 219,
       "precipitation": 0.0,
       "cloud_cover": 52.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -798,7 +798,7 @@
       "wind_direction_10m": 213,
       "precipitation": 0.0,
       "cloud_cover": 66.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -817,7 +817,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 81.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -836,7 +836,7 @@
       "wind_direction_10m": 218,
       "precipitation": 0.0,
       "cloud_cover": 89.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -855,7 +855,7 @@
       "wind_direction_10m": 216,
       "precipitation": 0.0,
       "cloud_cover": 44.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -874,7 +874,7 @@
       "wind_direction_10m": 214,
       "precipitation": 0.0,
       "cloud_cover": 97.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -893,7 +893,7 @@
       "wind_direction_10m": 219,
       "precipitation": 0.0,
       "cloud_cover": 69.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -912,7 +912,7 @@
       "wind_direction_10m": 218,
       "precipitation": 0.0,
       "cloud_cover": 95.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -931,7 +931,7 @@
       "wind_direction_10m": 217,
       "precipitation": 0.0,
       "cloud_cover": 95.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 74.0,
       "dominant_pollutant": null
     },
     {
@@ -950,7 +950,7 @@
       "wind_direction_10m": 216,
       "precipitation": 0.0,
       "cloud_cover": 99.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 75.0,
       "dominant_pollutant": null
     },
     {
@@ -969,7 +969,7 @@
       "wind_direction_10m": 216,
       "precipitation": 0.0,
       "cloud_cover": 98.0,
-      "om_forecast_aqi": 76.0,
+      "om_forecast_aqi": 75.0,
       "dominant_pollutant": null
     },
     {
@@ -988,7 +988,7 @@
       "wind_direction_10m": 220,
       "precipitation": 0.0,
       "cloud_cover": 96.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 75.0,
       "dominant_pollutant": null
     },
     {
@@ -1007,7 +1007,7 @@
       "wind_direction_10m": 221,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1026,7 +1026,7 @@
       "wind_direction_10m": 222,
       "precipitation": 0.0,
       "cloud_cover": 100.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1045,7 +1045,7 @@
       "wind_direction_10m": 222,
       "precipitation": 0.0,
       "cloud_cover": 98.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1064,7 +1064,7 @@
       "wind_direction_10m": 211,
       "precipitation": 0.0,
       "cloud_cover": 96.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1083,7 +1083,7 @@
       "wind_direction_10m": 207,
       "precipitation": 0.0,
       "cloud_cover": 96.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1102,7 +1102,7 @@
       "wind_direction_10m": 210,
       "precipitation": 0.0,
       "cloud_cover": 79.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1121,7 +1121,7 @@
       "wind_direction_10m": 224,
       "precipitation": 0.0,
       "cloud_cover": 62.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1140,7 +1140,7 @@
       "wind_direction_10m": 232,
       "precipitation": 0.0,
       "cloud_cover": 53.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1159,7 +1159,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 16.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1178,7 +1178,7 @@
       "wind_direction_10m": 227,
       "precipitation": 0.0,
       "cloud_cover": 3.0,
-      "om_forecast_aqi": 77.0,
+      "om_forecast_aqi": 76.0,
       "dominant_pollutant": null
     },
     {
@@ -1197,7 +1197,7 @@
       "wind_direction_10m": 222,
       "precipitation": 0.0,
       "cloud_cover": 2.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1216,7 +1216,7 @@
       "wind_direction_10m": 217,
       "precipitation": 0.0,
       "cloud_cover": 1.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1235,7 +1235,7 @@
       "wind_direction_10m": 213,
       "precipitation": 0.0,
       "cloud_cover": 1.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1254,7 +1254,7 @@
       "wind_direction_10m": 208,
       "precipitation": 0.0,
       "cloud_cover": 84.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1273,7 +1273,7 @@
       "wind_direction_10m": 208,
       "precipitation": 0.0,
       "cloud_cover": 98.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1292,7 +1292,7 @@
       "wind_direction_10m": 210,
       "precipitation": 0.0,
       "cloud_cover": 89.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1311,7 +1311,7 @@
       "wind_direction_10m": 212,
       "precipitation": 0.0,
       "cloud_cover": 25.0,
-      "om_forecast_aqi": 78.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1330,7 +1330,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1349,7 +1349,7 @@
       "wind_direction_10m": 220,
       "precipitation": 0.0,
       "cloud_cover": 22.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1368,7 +1368,7 @@
       "wind_direction_10m": 220,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1387,7 +1387,7 @@
       "wind_direction_10m": 219,
       "precipitation": 0.0,
       "cloud_cover": 11.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1406,7 +1406,7 @@
       "wind_direction_10m": 217,
       "precipitation": 0.0,
       "cloud_cover": 72.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1425,7 +1425,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 56.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1444,7 +1444,7 @@
       "wind_direction_10m": 216,
       "precipitation": 0.0,
       "cloud_cover": 14.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1463,7 +1463,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 2.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1482,7 +1482,7 @@
       "wind_direction_10m": 213,
       "precipitation": 0.0,
       "cloud_cover": 15.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1501,7 +1501,7 @@
       "wind_direction_10m": 212,
       "precipitation": 0.0,
       "cloud_cover": 44.0,
-      "om_forecast_aqi": 79.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1520,7 +1520,7 @@
       "wind_direction_10m": 212,
       "precipitation": 0.0,
       "cloud_cover": 58.0,
-      "om_forecast_aqi": 80.0,
+      "om_forecast_aqi": 77.0,
       "dominant_pollutant": null
     },
     {
@@ -1539,7 +1539,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 82.0,
-      "om_forecast_aqi": 80.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1558,7 +1558,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 32.0,
-      "om_forecast_aqi": 80.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1577,7 +1577,7 @@
       "wind_direction_10m": 231,
       "precipitation": 0.0,
       "cloud_cover": 51.0,
-      "om_forecast_aqi": 81.0,
+      "om_forecast_aqi": 78.0,
       "dominant_pollutant": null
     },
     {
@@ -1596,7 +1596,7 @@
       "wind_direction_10m": 232,
       "precipitation": 0.0,
       "cloud_cover": 44.0,
-      "om_forecast_aqi": 81.0,
+      "om_forecast_aqi": 79.0,
       "dominant_pollutant": null
     },
     {
@@ -1615,7 +1615,7 @@
       "wind_direction_10m": 224,
       "precipitation": 0.0,
       "cloud_cover": 78.0,
-      "om_forecast_aqi": 82.0,
+      "om_forecast_aqi": 79.0,
       "dominant_pollutant": null
     },
     {
@@ -1634,7 +1634,7 @@
       "wind_direction_10m": 219,
       "precipitation": 0.0,
       "cloud_cover": 87.0,
-      "om_forecast_aqi": 82.0,
+      "om_forecast_aqi": 79.0,
       "dominant_pollutant": null
     },
     {
@@ -1653,7 +1653,7 @@
       "wind_direction_10m": 213,
       "precipitation": 0.0,
       "cloud_cover": 76.0,
-      "om_forecast_aqi": 82.0,
+      "om_forecast_aqi": 79.0,
       "dominant_pollutant": null
     },
     {
@@ -1672,7 +1672,7 @@
       "wind_direction_10m": 208,
       "precipitation": 0.0,
       "cloud_cover": 55.0,
-      "om_forecast_aqi": 83.0,
+      "om_forecast_aqi": 80.0,
       "dominant_pollutant": null
     },
     {
@@ -1691,7 +1691,7 @@
       "wind_direction_10m": 206,
       "precipitation": 0.0,
       "cloud_cover": 36.0,
-      "om_forecast_aqi": 83.0,
+      "om_forecast_aqi": 80.0,
       "dominant_pollutant": null
     },
     {
@@ -1710,7 +1710,7 @@
       "wind_direction_10m": 207,
       "precipitation": 0.0,
       "cloud_cover": 23.0,
-      "om_forecast_aqi": 84.0,
+      "om_forecast_aqi": 80.0,
       "dominant_pollutant": null
     },
     {
@@ -1729,7 +1729,7 @@
       "wind_direction_10m": 210,
       "precipitation": 0.0,
       "cloud_cover": 12.0,
-      "om_forecast_aqi": 84.0,
+      "om_forecast_aqi": 81.0,
       "dominant_pollutant": null
     },
     {
@@ -1748,7 +1748,7 @@
       "wind_direction_10m": 213,
       "precipitation": 0.0,
       "cloud_cover": 4.0,
-      "om_forecast_aqi": 85.0,
+      "om_forecast_aqi": 81.0,
       "dominant_pollutant": null
     },
     {
@@ -1767,7 +1767,7 @@
       "wind_direction_10m": 214,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 85.0,
+      "om_forecast_aqi": 81.0,
       "dominant_pollutant": null
     },
     {
@@ -1786,7 +1786,7 @@
       "wind_direction_10m": 215,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 86.0,
+      "om_forecast_aqi": 82.0,
       "dominant_pollutant": null
     },
     {
@@ -1805,7 +1805,7 @@
       "wind_direction_10m": 216,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 86.0,
+      "om_forecast_aqi": 82.0,
       "dominant_pollutant": null
     },
     {
@@ -1824,7 +1824,7 @@
       "wind_direction_10m": 218,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 86.0,
+      "om_forecast_aqi": 82.0,
       "dominant_pollutant": null
     },
     {
@@ -1843,7 +1843,7 @@
       "wind_direction_10m": 219,
       "precipitation": 0.0,
       "cloud_cover": 0.0,
-      "om_forecast_aqi": 86.0,
+      "om_forecast_aqi": 82.0,
       "dominant_pollutant": null
     },
     {
@@ -1862,7 +1862,7 @@
       "wind_direction_10m": 219,
       "precipitation": 0.0,
       "cloud_cover": 2.0,
-      "om_forecast_aqi": 86.0,
+      "om_forecast_aqi": 82.0,
       "dominant_pollutant": null
     }
   ]
