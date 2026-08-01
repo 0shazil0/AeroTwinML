@@ -256,24 +256,8 @@ def explainability():
         except Exception:
             df = None
 
-    if df is None or df.empty:
-        # Build single-row DataFrame from embedded forecast data
-        if forecast:
-            row = {}
-            if forecast.get("current_aqi"):
-                row["aqi"] = forecast["current_aqi"]
-            if forecast.get("weather"):
-                for k, v in forecast["weather"].items():
-                    if v is not None:
-                        row[k] = v
-            if forecast.get("pollutants"):
-                for k, v in forecast["pollutants"].items():
-                    if v is not None:
-                        row[k] = v
-            if row:
-                df = pd.DataFrame([row])
-
-    if df is not None and len(df) > 1:
+    if df is not None and not df.empty and len(df) > 1:
+        # We have enough history data — compute correlation-based drivers
         aqi_col = "aqi" if "aqi" in df.columns else "om_forecast_aqi"
         if aqi_col in df.columns:
             numeric = df.select_dtypes(include=[np.number])
@@ -301,6 +285,58 @@ def explainability():
                     }
                 except Exception:
                     pass
+
+    # Fallback: generate drivers from current forecast data (pollutants + weather)
+    if not explanation["top_drivers"] and forecast:
+        drivers = []
+        current_aqi = forecast.get("current_aqi", 0) or 0
+
+        # Pollutant drivers — show relative contribution to AQI
+        pollutants = forecast.get("pollutants", {})
+        pollutant_max = {"pm2_5": 75, "pm10": 150, "no2": 200, "o3": 200, "so2": 250, "co": 10000}
+        for key, max_val in pollutant_max.items():
+            val = pollutants.get(key)
+            if val is not None:
+                try:
+                    val = float(val)
+                    importance = min(val / max_val, 1.0)
+                    drivers.append({
+                        "feature": key,
+                        "importance": round(importance, 4),
+                        "direction": "positive",
+                    })
+                except (ValueError, TypeError):
+                    pass
+
+        # Weather drivers — show current conditions
+        weather = forecast.get("weather", {})
+        weather_factors = {
+            "temperature": (float(weather.get("temperature", 0) or 0), "positive" if float(weather.get("temperature", 0) or 0) > 30 else "negative"),
+            "humidity": (float(weather.get("humidity", 0) or 0) / 100, "positive" if float(weather.get("humidity", 0) or 0) > 60 else "negative"),
+            "wind_speed": (float(weather.get("wind_speed", 0) or 0) / 20, "negative"),
+        }
+        for feat, (val, direction) in weather_factors.items():
+            if val > 0:
+                drivers.append({
+                    "feature": feat,
+                    "importance": round(min(abs(val), 1.0), 4),
+                    "direction": direction,
+                })
+
+        drivers.sort(key=lambda d: d["importance"], reverse=True)
+
+        if drivers:
+            top = drivers[0]
+            dominant = pollutants.get("dominant_pollutant") or "PM2.5"
+            nl = (f"Current AQI is {current_aqi:.0f}. "
+                  f"Dominant pollutant: {dominant}. "
+                  f"Strongest factor: {top['feature'].replace('_', ' ')}.")
+            explanation = {
+                "top_drivers": drivers[:10],
+                "natural_language": nl,
+                "global_importance": drivers[:10],
+                "method": "current_snapshot",
+            }
 
     return render_template(
         "explainability.html",

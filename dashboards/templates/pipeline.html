@@ -4,18 +4,24 @@
 {% block content %}
 <h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Pipeline Status</h2>
 
+{% set hourly = pipeline.hourly_pipeline if pipeline else {} %}
+{% set daily = pipeline.daily_pipeline if pipeline else {} %}
+{% set freshness = pipeline.data_freshness if pipeline else {} %}
+
 <!-- Pipeline Health -->
 <div class="grid-3" style="margin-bottom: 24px;">
     <div class="card stat-card">
-        <div class="stat-value" id="overall-status" style="color: var(--text-muted);">Checking...</div>
+        <div class="stat-value" style="color: {% if hourly.success %}#00e400{% elif hourly.error %}#ff3333{% else %}#ff7e00{% endif %};">
+            {% if hourly.success %}Healthy{% elif hourly.error %}Error{% else %}Unknown{% endif %}
+        </div>
         <div class="stat-label">Overall Health</div>
     </div>
     <div class="card stat-card">
-        <div class="stat-value" style="font-size: 16px;" id="last-hourly">--</div>
+        <div class="stat-value" style="font-size: 16px;">{{ hourly.completed_at or 'N/A' }}</div>
         <div class="stat-label">Last Hourly Run</div>
     </div>
     <div class="card stat-card">
-        <div class="stat-value" style="font-size: 16px;" id="last-daily">--</div>
+        <div class="stat-value" style="font-size: 16px;">{{ daily.completed_at or 'N/A' }}</div>
         <div class="stat-label">Last Daily Run</div>
     </div>
 </div>
@@ -23,22 +29,40 @@
 <!-- Hourly Pipeline Steps -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">Hourly Pipeline</div>
-    <div id="hourly-steps" style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% if hourly.steps %}
+        {% for step, info in hourly.steps.items() %}
         <div class="pipeline-step">
-            <span class="step-indicator step-pending"></span>
-            <span>Loading pipeline status...</span>
+            <span class="step-indicator {% if info.status == 'ok' %}step-ok{% elif info.status == 'empty' %}step-warn{% else %}step-error{% endif %}"></span>
+            <span style="flex:1"><strong>{{ step }}</strong></span>
+            <span style="color:var(--text-secondary);font-size:12px;">
+                {% if info.rows_fetched %}{{ info.rows_fetched }} rows{% elif info.features_generated %}{{ info.features_generated }} features{% elif info.current_aqi %}AQI {{ info.current_aqi }}{% elif info.status == 'ok' %}OK{% else %}{{ info.detail or '' }}{% endif %}
+            </span>
         </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:var(--text-secondary);">No hourly pipeline data yet.</p>
+        {% endif %}
     </div>
 </div>
 
-<!-- Daily Pipeline -->
+<!-- Daily Pipeline Steps -->
 <div class="card" style="margin-bottom: 24px;">
     <div class="card-header">Daily Retraining Pipeline</div>
-    <div id="daily-steps" style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% if daily.steps %}
+        {% for step, info in daily.steps.items() %}
         <div class="pipeline-step">
-            <span class="step-indicator step-pending"></span>
-            <span>Loading daily pipeline status...</span>
+            <span class="step-indicator {% if info.status == 'ok' %}step-ok{% elif info.status == 'skipped' %}step-warn{% else %}step-error{% endif %}"></span>
+            <span style="flex:1"><strong>{{ step }}</strong></span>
+            <span style="color:var(--text-secondary);font-size:12px;">
+                {% if info.rows %}{{ info.rows }} rows{% elif info.best_model %}{{ info.best_model }}{% elif info.model_uri %}{{ info.model_uri }}{% elif info.train_rows %}{{ info.train_rows }} train rows{% else %}{{ info.detail or '' }}{% endif %}
+            </span>
         </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:var(--text-secondary);">No daily pipeline run yet.</p>
+        {% endif %}
     </div>
 </div>
 
@@ -47,11 +71,13 @@
     <div class="card-header">Data Freshness</div>
     <div class="grid-3">
         <div class="stat-card">
-            <div class="stat-value" style="font-size: 16px;" id="data-latest">--</div>
+            <div class="stat-value" style="font-size: 16px;">{{ freshness.latest_timestamp or 'N/A' }}</div>
             <div class="stat-label">Latest Observation</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" style="font-size: 16px;" id="data-status">--</div>
+            <div class="stat-value" style="font-size: 16px; color: {% if freshness.status == 'healthy' %}#00e400{% else %}#ff7e00{% endif %};">
+                {% if freshness.status == 'healthy' %}Fresh{% else %}Stale{% endif %}
+            </div>
             <div class="stat-label">Data Status</div>
         </div>
         <div class="stat-card">
@@ -60,73 +86,4 @@
         </div>
     </div>
 </div>
-
-<script>
-async function loadPipelineStatus() {
-    try {
-        const resp = await fetch('/api/v1/pipeline/status');
-        const result = await resp.json();
-        const data = result.data || {};
-
-        // Overall status
-        const hourly = data.hourly_pipeline || {};
-        const daily = data.daily_pipeline || {};
-
-        const overallEl = document.getElementById('overall-status');
-        if (hourly.success) {
-            overallEl.style.color = '#00e400'; overallEl.textContent = 'Healthy';
-        } else if (hourly.error) {
-            overallEl.style.color = '#ff3333'; overallEl.textContent = 'Error';
-        } else {
-            overallEl.style.color = '#ff7e00'; overallEl.textContent = 'Unknown';
-        }
-
-        document.getElementById('last-hourly').textContent = hourly.completed_at || 'N/A';
-        document.getElementById('last-daily').textContent = daily.completed_at || 'N/A';
-
-        // Hourly steps
-        if (hourly.steps) {
-            const stepsHtml = Object.entries(hourly.steps).map(([step, info]) => {
-                const status = info.status === 'ok' ? 'step-ok' : info.status === 'empty' ? 'step-warn' : 'step-error';
-                const detail = info.rows_fetched ? `${info.rows_fetched} rows` : info.detail || '';
-                return `<div class="pipeline-step">
-                    <span class="step-indicator ${status}"></span>
-                    <span style="flex:1"><strong>${step}</strong></span>
-                    <span style="color:var(--text-secondary);font-size:12px;">${detail}</span>
-                </div>`;
-            }).join('');
-            document.getElementById('hourly-steps').innerHTML = stepsHtml || '<p style="color:var(--text-secondary);">No steps recorded</p>';
-        }
-
-        // Daily steps
-        if (daily.steps) {
-            const dailyHtml = Object.entries(daily.steps).map(([step, info]) => {
-                const status = info.status === 'ok' ? 'step-ok' : info.status === 'skipped' ? 'step-warn' : 'step-error';
-                const detail = info.rows !== undefined ? `${info.rows} rows` : info.detail || info.model_uri || '';
-                return `<div class="pipeline-step">
-                    <span class="step-indicator ${status}"></span>
-                    <span style="flex:1"><strong>${step}</strong></span>
-                    <span style="color:var(--text-secondary);font-size:12px;">${detail}</span>
-                </div>`;
-            }).join('');
-            document.getElementById('daily-steps').innerHTML = dailyHtml || '<p style="color:var(--text-secondary);">No daily pipeline run yet</p>';
-        }
-
-        // Data freshness
-        if (data.data_freshness) {
-            document.getElementById('data-latest').textContent = data.data_freshness.latest_timestamp || 'N/A';
-            const status = data.data_freshness.status;
-            const sEl = document.getElementById('data-status');
-            sEl.textContent = status === 'healthy' ? 'Fresh' : 'Stale';
-            sEl.style.color = status === 'healthy' ? '#00e400' : '#ff7e00';
-        }
-    } catch(e) {
-        document.getElementById('overall-status').textContent = 'Offline';
-        document.getElementById('overall-status').style.color = '#ff3333';
-    }
-}
-
-loadPipelineStatus();
-setInterval(loadPipelineStatus, 30000);
-</script>
 {% endblock %}
