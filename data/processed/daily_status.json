@@ -1,11 +1,11 @@
 {
   "pipeline": "daily",
-  "started_at": "2026-07-31T22:59:35.848370+05:00",
+  "started_at": "2026-08-01T10:29:47.259278+05:00",
   "steps": {
     "backfill": {
       "status": "ok",
       "rows": 17544,
-      "range": "2024-07-30 \u2192 2026-07-30",
+      "range": "2024-07-31 \u2192 2026-07-31",
       "observed_labels": "4678"
     },
     "features": {
@@ -17,7 +17,7 @@
     "training": {
       "status": "ok",
       "best_model": "seasonal_naive",
-      "best_horizon": "24h",
+      "best_horizon": "48h",
       "models_trained": 21
     },
     "registry": {
@@ -28,5 +28,5 @@
   },
   "success": true,
   "backend": "hopsworks",
-  "completed_at": "2026-07-31T23:03:09.538885+05:00"
+  "completed_at": "2026-08-01T10:33:51.018256+05:00"
 }
