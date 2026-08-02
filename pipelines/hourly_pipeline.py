@@ -286,7 +286,47 @@ def _embed_history(forecast: dict, hours: int = 168):
         logger.warning("Could not embed history: %s", e)
 
 
-if __name__ == "__main__":
+def _embed_history_from_df(forecast: dict, df: pd.DataFrame, hours: int = 168):
+    """Embed last N hours from a DataFrame directly into forecast JSON.
+
+    Used by the daily pipeline which has the training DataFrame in memory
+    but no merged parquet file on CI.
+    """
+    try:
+        if df.empty:
+            return
+
+        df = df.copy()
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
+            if df["timestamp"].dt.tz is None:
+                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
+            else:
+                df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
+            df = df[df["timestamp"] >= cutoff]
+
+        keep_cols = [
+            "timestamp", "aqi", "pm2_5", "pm10", "no2", "o3", "so2", "co",
+            "temperature_2m", "relative_humidity_2m", "pressure_msl",
+            "wind_speed_10m", "wind_direction_10m", "precipitation", "cloud_cover",
+            "om_forecast_aqi", "dominant_pollutant",
+        ]
+        available = [c for c in keep_cols if c in df.columns]
+        df = df[available].tail(hours * 2)
+
+        records = []
+        for _, row in df.iterrows():
+            rec = {}
+            for col in available:
+                rec[col] = _to_json_safe(row[col])
+            records.append(rec)
+
+        forecast["history"] = records
+        logger.info("Embedded %d history rows from DataFrame", len(records))
+
+    except Exception as e:
+        logger.warning("Could not embed history from DataFrame: %s", e)
     result = run_hourly_pipeline()
     print(json.dumps(result, indent=2, default=str))
     sys.exit(0 if result["success"] else 1)
