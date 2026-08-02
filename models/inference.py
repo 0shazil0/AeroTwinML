@@ -93,34 +93,47 @@ class InferenceEngine:
         return None
 
     def _fallback_forecast(self, features: pd.DataFrame) -> Dict[str, Any]:
-        """Simple fallback when no trained model exists."""
+        """Fallback when no trained model exists.
+
+        Uses Open-Meteo's forecast AQI for future horizons if available,
+        otherwise falls back to persistence (repeat current value).
+        """
         aqi_col = self._find_aqi_col(features)
         current = 0.0
         if aqi_col:
             vals = features[aqi_col].dropna()
             current = float(vals.iloc[-1]) if len(vals) > 0 else 0.0
 
-        # Naive persistence
+        # Try to use Open-Meteo's forecast AQI for future horizons
+        om_col = "om_forecast_aqi" if "om_forecast_aqi" in features.columns else None
+        om_values = []
+        if om_col:
+            om_values = features[om_col].dropna().tolist()
+
         result = {
             "current_aqi": round(current, 1),
-            "forecast": {
-                "24h": {
-                    "aqi": round(current, 1),
-                    "category": classify_aqi(current).value,
-                    "alert": is_alert_level(current),
-                },
-                "48h": {
-                    "aqi": round(current, 1),
-                    "category": classify_aqi(current).value,
-                    "alert": is_alert_level(current),
-                },
-                "72h": {
-                    "aqi": round(current, 1),
-                    "category": classify_aqi(current).value,
-                    "alert": is_alert_level(current),
-                },
-            },
+            "forecast": {},
             "timestamp": pd.Timestamp.now().isoformat(),
-            "model_info": {"type": "fallback_persistence", "features_used": 0},
+            "model_info": {"type": "fallback_om_forecast", "features_used": 0},
         }
+
+        # Use Open-Meteo forecast AQI for each horizon if available
+        for h in [24, 48, 72]:
+            if len(om_values) >= h:
+                pred = float(om_values[h - 1])
+            elif om_values:
+                # Use the last available OM forecast value
+                pred = float(om_values[-1])
+            else:
+                pred = current
+
+            result["forecast"][f"{h}h"] = {
+                "aqi": round(pred, 1),
+                "category": classify_aqi(pred).value,
+                "alert": is_alert_level(pred),
+            }
+
+        if not om_values:
+            result["model_info"]["type"] = "fallback_persistence"
+
         return result
