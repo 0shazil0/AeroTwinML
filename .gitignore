@@ -44,6 +44,9 @@ data/raw/logs/alerts.jsonl
 # Model artifacts
 models/artifacts/*
 !models/artifacts/aqi_forecaster_latest.pkl
+!models/artifacts/aqi_forecaster_24h.pkl
+!models/artifacts/aqi_forecaster_48h.pkl
+!models/artifacts/aqi_forecaster_72h.pkl
 mlruns/
 mlartifacts/
 

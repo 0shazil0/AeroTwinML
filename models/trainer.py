@@ -198,12 +198,7 @@ def build_models_for_horizons(
     except ImportError:
         logger.warning("LightGBM not installed")
 
-    # Baselines don't need feature training
-    baselines = {
-        "persistence": PersistenceModel(),
-        "seasonal_naive": SeasonalNaiveModel(),
-    }
-
+    # Baselines — create NEW instances per horizon to avoid mutation
     for horizon_key, target_col in target_cols.items():
         y_train = train_df[target_col].dropna()
         y_test = test_df[target_col].dropna()
@@ -218,7 +213,11 @@ def build_models_for_horizons(
 
         horizon_results = {}
 
-        # Baselines
+        # Baselines — fresh instances per horizon
+        baselines = {
+            "persistence": PersistenceModel(),
+            "seasonal_naive": SeasonalNaiveModel(),
+        }
         for bname, bmodel in baselines.items():
             bmodel.fit(common_train[0], common_train[1])
             metrics = evaluate_model(bmodel, common_test[0], common_test[1])
@@ -277,3 +276,37 @@ def find_best_model(results: Dict[str, Any], primary_metric: str = "rmse_24h") -
             all_metrics[f"{horizon_key}_{mname}"] = result.get("metrics", {})
 
     return best_mname, best_horizon, best_model, all_metrics
+
+
+def find_best_models_per_horizon(results: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Find the best model for EACH horizon independently.
+
+    Returns:
+        {"24h": {"model_name": str, "model": BaseModel, "metrics": dict},
+         "48h": {...}, "72h": {...}}
+    """
+    best_per_horizon = {}
+
+    for horizon_key, horizon_results in results.items():
+        best_score = float("inf")
+        best_entry = None
+
+        for mname, result in horizon_results.items():
+            metrics = result.get("metrics", {})
+            # Find the RMSE metric for this specific horizon
+            metric_key = f"rmse_{horizon_key}"
+            score = metrics.get(metric_key, float("inf"))
+
+            if score < best_score:
+                best_score = score
+                best_entry = {
+                    "model_name": mname,
+                    "model": result["model"],
+                    "metrics": metrics,
+                    "rmse": best_score,
+                }
+
+        if best_entry:
+            best_per_horizon[horizon_key] = best_entry
+
+    return best_per_horizon

@@ -21,8 +21,8 @@ from feature_store.hopsworks_client import (
     is_available as hopsworks_available,
 )
 from ingestion.orchestrator import IngestionOrchestrator
-from models.registry import log_experiment, register_model
-from models.trainer import build_models_for_horizons, find_best_model
+from models.registry import log_experiment, register_model, save_models_by_horizon
+from models.trainer import build_models_for_horizons, find_best_model, find_best_models_per_horizon
 from utils.config import get
 from utils.logging import setup_logger
 from utils.storage import load_parquet, save_json, save_parquet
@@ -170,11 +170,18 @@ def run_daily_pipeline() -> dict:
         results = build_models_for_horizons(feature_cols, target_cols, train_split, test_split)
         best_mname, best_horizon, best_model, all_metrics = find_best_model(results, "rmse_24h")
 
+        # Find best model per horizon (24h, 48h, 72h independently)
+        best_per_horizon = find_best_models_per_horizon(results)
+
         status["steps"]["training"] = {
             "status": "ok",
             "best_model": best_mname,
             "best_horizon": best_horizon,
             "models_trained": sum(len(v) for v in results.values()),
+            "per_horizon": {
+                h: {"model": e["model_name"], "rmse": round(e.get("rmse", 0), 3)}
+                for h, e in best_per_horizon.items()
+            },
         }
 
         # Step 4: Register to Hopsworks Model Registry (or MLflow fallback)
@@ -200,6 +207,12 @@ def run_daily_pipeline() -> dict:
             import joblib
             fallback_path = DATA_DIR.parent / "models" / "artifacts" / "aqi_forecaster_latest.pkl"
             joblib.dump(best_model, fallback_path)
+
+            # Save per-horizon models for differentiated forecasts
+            if best_per_horizon:
+                save_models_by_horizon(best_per_horizon)
+                logger.info("Saved per-horizon models: %s",
+                            {h: e["model_name"] for h, e in best_per_horizon.items()})
 
             # Run inference on the latest data to produce forecast
             try:

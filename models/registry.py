@@ -140,6 +140,52 @@ def get_latest_model(model_name: str = "aqi_forecaster") -> Optional[Any]:
     return None
 
 
+def get_models_by_horizon() -> Dict[str, Dict[str, Any]]:
+    """Load per-horizon models from local pickle files.
+
+    Returns:
+        {"24h": {"model_name": str, "model": BaseModel}, "48h": {...}, "72h": {...}}
+    """
+    import joblib
+
+    horizons = {}
+    for h in ["24h", "48h", "72h"]:
+        path = MODEL_DIR / f"aqi_forecaster_{h}.pkl"
+        if path.exists():
+            try:
+                obj = joblib.load(str(path))
+                if isinstance(obj, dict):
+                    horizons[h] = obj
+                else:
+                    horizons[h] = {"model_name": type(obj).__name__, "model": obj}
+                logger.info("Loaded per-horizon model: %s from %s", h, path)
+            except Exception as e:
+                logger.warning("Failed to load %s model: %s", h, e)
+    return horizons
+
+
+def save_models_by_horizon(best_per_horizon: Dict[str, Dict[str, Any]]) -> None:
+    """Save per-horizon models to local pickle files.
+
+    Args:
+        best_per_horizon: {"24h": {"model_name": str, "model": BaseModel, ...}, ...}
+    """
+    import joblib
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    for horizon_key, entry in best_per_horizon.items():
+        path = MODEL_DIR / f"aqi_forecaster_{horizon_key}.pkl"
+        obj = {
+            "model_name": entry["model_name"],
+            "model": entry["model"],
+            "metrics": entry.get("metrics", {}),
+            "rmse": entry.get("rmse"),
+        }
+        joblib.dump(obj, path)
+        logger.info("Saved per-horizon model: %s (%s, rmse=%.3f) -> %s",
+                     horizon_key, entry["model_name"], entry.get("rmse", 0), path)
+
+
 def register_model(model_name: str = "aqi_forecaster") -> Optional[str]:
     """Register latest model. Redirects to Hopsworks if available."""
     if hopsworks_available():

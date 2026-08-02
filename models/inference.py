@@ -13,11 +13,32 @@ logger = get_logger(__name__)
 
 
 class InferenceEngine:
-    """Loads model, runs predictions, returns structured forecasts."""
+    """Loads model(s), runs predictions, returns structured forecasts.
+
+    Supports per-horizon models: separate models for 24h, 48h, 72h.
+    Falls back to single model if per-horizon models aren't available.
+    """
 
     def __init__(self):
-        self.model = get_latest_model()
+        self.model = None
+        self.models_by_horizon: dict = {}
         self.feature_cols: List[str] = []
+        self._load_models()
+
+    def _load_models(self):
+        """Load per-horizon models, falling back to single model."""
+        from models.registry import get_models_by_horizon, get_latest_model
+
+        # Try per-horizon models first
+        horizon_models = get_models_by_horizon()
+        if horizon_models:
+            self.models_by_horizon = horizon_models
+            logger.info("Loaded per-horizon models: %s", list(horizon_models.keys()))
+        else:
+            # Fallback: single model for all horizons
+            self.model = get_latest_model()
+            if self.model:
+                logger.info("Loaded single model: %s", type(self.model).__name__)
 
     def predict(
         self,
@@ -67,21 +88,29 @@ class InferenceEngine:
         X = features[feature_cols].fillna(0).values[-1:]
 
         for h in horizons:
-            try:
-                pred = float(self.model.predict(X)[0])
-            except Exception as e:
-                logger.error("Prediction error for %dh: %s", h, e)
+            horizon_key = f"{h}h"
+            # Use per-horizon model if available, else single model
+            model_for_h = self.models_by_horizon.get(horizon_key, {}).get("model") or self.model
+            if model_for_h is None:
                 pred = result["current_aqi"]
+            else:
+                try:
+                    pred = float(model_for_h.predict(X)[0])
+                except Exception as e:
+                    logger.error("Prediction error for %s: %s", horizon_key, e)
+                    pred = result["current_aqi"]
 
-            result["forecast"][f"{h}h"] = {
+            result["forecast"][horizon_key] = {
                 "aqi": round(pred, 1),
                 "category": classify_aqi(pred).value,
                 "alert": is_alert_level(pred),
             }
 
+        model_names = {k: v.get("model_name", "?") for k, v in self.models_by_horizon.items()}
         result["model_info"] = {
-            "type": type(self.model).__name__,
+            "type": "per_horizon" if self.models_by_horizon else (type(self.model).__name__ if self.model else "none"),
             "features_used": len(feature_cols),
+            "horizon_models": model_names if model_names else None,
         }
 
         return result
