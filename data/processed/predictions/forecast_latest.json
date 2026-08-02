@@ -1,26 +1,26 @@
 {
+  "current_aqi": 79.0,
   "forecast": {
     "24h": {
-      "aqi": 72.0,
+      "aqi": 79.0,
       "category": "Moderate",
       "alert": false
     },
     "48h": {
-      "aqi": 72.0,
+      "aqi": 74.0,
       "category": "Moderate",
       "alert": false
     },
     "72h": {
-      "aqi": 72.0,
+      "aqi": 78.0,
       "category": "Moderate",
       "alert": false
     }
   },
-  "timestamp": "2026-08-02T13:19:52.323413",
-  "current_aqi": 72.0,
+  "timestamp": "2026-08-02T14:19:35.783933",
   "model_info": {
-    "type": "SklearnWrapper",
-    "features_used": 57
+    "type": "fallback_om_forecast",
+    "features_used": 0
   },
   "weather": {
     "temperature": 27.8,
@@ -43,28 +43,28 @@
   "city": "Hyderabad",
   "cities": {
     "Hyderabad": {
+      "current_aqi": 79.0,
       "forecast": {
         "24h": {
-          "aqi": 72.0,
+          "aqi": 79.0,
           "category": "Moderate",
           "alert": false
         },
         "48h": {
-          "aqi": 72.0,
+          "aqi": 74.0,
           "category": "Moderate",
           "alert": false
         },
         "72h": {
-          "aqi": 72.0,
+          "aqi": 78.0,
           "category": "Moderate",
           "alert": false
         }
       },
-      "timestamp": "2026-08-02T13:19:52.323413",
-      "current_aqi": 72.0,
+      "timestamp": "2026-08-02T14:19:35.783933",
       "model_info": {
-        "type": "SklearnWrapper",
-        "features_used": 57
+        "type": "fallback_om_forecast",
+        "features_used": 0
       },
       "weather": {
         "temperature": 27.8,
@@ -87,28 +87,28 @@
       "city": "Hyderabad"
     },
     "Karachi": {
+      "current_aqi": 79.0,
       "forecast": {
         "24h": {
-          "aqi": 72.0,
+          "aqi": 76.0,
           "category": "Moderate",
           "alert": false
         },
         "48h": {
-          "aqi": 72.0,
+          "aqi": 76.0,
           "category": "Moderate",
           "alert": false
         },
         "72h": {
-          "aqi": 72.0,
+          "aqi": 81.0,
           "category": "Moderate",
           "alert": false
         }
       },
-      "timestamp": "2026-08-02T13:19:52.329647",
-      "current_aqi": 72.0,
+      "timestamp": "2026-08-02T14:19:35.785873",
       "model_info": {
-        "type": "SklearnWrapper",
-        "features_used": 57
+        "type": "fallback_om_forecast",
+        "features_used": 0
       },
       "weather": {
         "temperature": 28.6,
@@ -381,9 +381,9 @@
     },
     {
       "timestamp": "2026-08-02T13:00:00+00:00",
-      "aqi": 72.0,
-      "pm2_5": 72.0,
-      "pm10": 21.0,
+      "aqi": 79.0,
+      "pm2_5": 79.0,
+      "pm10": 24.0,
       "no2": null,
       "o3": null,
       "so2": null,
