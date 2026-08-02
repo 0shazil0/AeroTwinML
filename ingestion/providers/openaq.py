@@ -34,11 +34,11 @@ REQUEST_DELAY = 0.3  # seconds between API calls to respect rate limits
 
 
 class OpenAQProvider(BaseProvider):
-    def __init__(self):
+    def __init__(self, location_id: int = None, city_name: str = None):
         super().__init__("openaq")
         self.api_key = os.getenv("OPENAQ_API_KEY") or ""
-        self.location_id = int(os.getenv("OPENAQ_LOCATION_ID") or "4889110")
-        self.city = get("city.name", "Hyderabad")
+        self.location_id = location_id or int(os.getenv("OPENAQ_LOCATION_ID") or "4889110")
+        self.city = city_name or get("city.name", "Hyderabad")
         self.timeout = get("providers.openaq.timeout_seconds", 30)
         self._sensor_map: Dict[str, int] = {}  # param_name → sensor_id, populated on first use
 

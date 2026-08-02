@@ -105,6 +105,19 @@ body {
     color: var(--text-secondary);
 }
 .nav-city { color: var(--accent-cyan); font-weight: 500; }
+.city-select {
+    background: var(--bg-secondary);
+    color: var(--accent-cyan);
+    border: 1px solid var(--border-color, #2a2a4a);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+}
+.city-select:focus { border-color: var(--accent-cyan); }
+.city-select option { background: var(--bg-primary, #0a0a14); color: var(--text-primary, #e8e8f0); }
 .status-dot {
     width: 8px; height: 8px;
     border-radius: 50%;

@@ -45,10 +45,17 @@ def run_hourly_pipeline() -> dict:
     }
 
     try:
-        # Step 1: Ingestion (Open-Meteo + OpenAQ + AQICN)
+        # Step 1: Ingestion (Open-Meteo + OpenAQ + AQICN) — multi-city
         logger.info("=== Step 1: Data Ingestion ===")
         orchestrator = IngestionOrchestrator()
-        merged = orchestrator.run_full_cycle()
+
+        if orchestrator.locations:
+            merged = orchestrator.fetch_all_multi()
+            # Save merged data per city
+            if not merged.empty and "city" in merged.columns:
+                orchestrator.save_merged(merged)
+        else:
+            merged = orchestrator.run_full_cycle()
         status["steps"]["ingestion"] = {
             "status": "ok",
             "rows_fetched": len(merged),
@@ -91,12 +98,43 @@ def run_hourly_pipeline() -> dict:
         # Step 3: Inference (model from Hopsworks MR or local fallback)
         logger.info("=== Step 3: Inference ===")
         engine = InferenceEngine()
-        forecast = engine.predict(featured)
 
-        # Embed weather + pollutant data from the latest merged row
-        _embed_weather_and_pollutants(forecast, merged)
+        # Multi-city: generate per-city forecasts
+        cities = merged["city"].unique().tolist() if "city" in merged.columns else [None]
+        city_forecasts = {}
 
-        # Embed 7-day history for dashboard (avoids needing parquet on deployment)
+        for city_name in cities:
+            if city_name is not None:
+                city_mask = merged["city"] == city_name
+                city_merged = merged[city_mask]
+                city_featured = featured[featured["city"] == city_name] if "city" in featured.columns else featured
+            else:
+                city_merged = merged
+                city_featured = featured
+
+            if city_merged.empty or city_featured.empty:
+                continue
+
+            fc = engine.predict(city_featured)
+            _embed_weather_and_pollutants(fc, city_merged)
+            fc["city"] = city_name
+            city_forecasts[city_name or "default"] = fc
+            logger.info("  %s: current_aqi=%.1f, forecast_24h=%.1f",
+                        city_name or "default", fc.get("current_aqi", 0),
+                        fc.get("forecast", {}).get("24h", {}).get("aqi", 0))
+
+        # Build combined forecast JSON
+        if len(city_forecasts) == 1:
+            forecast = list(city_forecasts.values())[0]
+        else:
+            # Multi-city: wrap in cities dict, use first city as primary
+            primary = list(city_forecasts.values())[0]
+            forecast = {
+                **primary,
+                "cities": city_forecasts,
+            }
+
+        # Embed 7-day history for dashboard
         _embed_history(forecast)
 
         forecast_path = PREDICTIONS_DIR / f"forecast_{now_local().strftime('%Y%m%d_%H')}.json"

@@ -13,15 +13,18 @@ from utils.time_utils import floor_hour, now_local, utc_to_local
 
 
 class AQICNProvider(BaseProvider):
-    def __init__(self):
+    def __init__(self, station: str = None, city_name: str = None):
         super().__init__("aqicn")
         self.token = os.getenv("AQICN_TOKEN", "")
-        self.station = get("providers.aqicn.station_id", "A546205")
+        self.station = station or get("providers.aqicn.station_id", "A546205")
+        self.city_name = city_name or get("city.name", "Hyderabad")
         self.base_url = get("providers.aqicn.base_url", "https://api.waqi.info")
         self.timeout = get("providers.aqicn.timeout_seconds", 30)
 
     def fetch_raw(self) -> Dict[str, Any]:
         """Fetch current station feed from AQICN."""
+        if not self.station or self.station == "null":
+            return {"raw": {"data": {}}, "fetched_at": datetime.now().isoformat()}
         url = f"{self.base_url}/feed/{self.station}/"
         params = {"token": self.token}
 
@@ -45,7 +48,7 @@ class AQICNProvider(BaseProvider):
         record = {
             "timestamp": self._parse_time(time_info),
             "station_name": data.get("city", {}).get("name", self.station),
-            "city": data.get("city", {}).get("name", "Hyderabad"),
+            "city": data.get("city", {}).get("name", self.city_name),
             "country": data.get("city", {}).get("country", "PK"),
             "aqi": self._safe_float(data.get("aqi")),
             "pm2_5": self._safe_float(iaqi.get("pm25", {}).get("v") if isinstance(iaqi.get("pm25"), dict) else iaqi.get("pm25")),

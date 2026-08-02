@@ -37,6 +37,14 @@ class IngestionOrchestrator:
         self.open_meteo = OpenMeteoProvider()
         self.aqicn = AQICNProvider()
         self.openaq = OpenAQProvider()
+        self._locations = None
+
+    @property
+    def locations(self) -> list:
+        """Load locations from config. Returns list of location dicts."""
+        if self._locations is None:
+            self._locations = get("locations", [])
+        return self._locations
 
     def fetch_all(self) -> dict[str, pd.DataFrame]:
         """Fetch latest data from all providers.
@@ -255,3 +263,94 @@ class IngestionOrchestrator:
         if not merged.empty:
             self.save_merged(merged)
         return merged
+
+    # ─── Multi-city support ───────────────────────────────────────
+
+    def fetch_all_for_location(self, loc: dict) -> pd.DataFrame:
+        """Fetch + merge data for a single location dict from settings.yaml.
+
+        Args:
+            loc: dict with keys: name, latitude, longitude, openaq_location_id, aqicn_station
+
+        Returns:
+            Merged DataFrame tagged with 'city' column.
+        """
+        city = loc.get("name", "Unknown")
+        logger.info("=== Fetching data for %s ===", city)
+
+        om = OpenMeteoProvider(
+            lat=loc.get("latitude"),
+            lon=loc.get("longitude"),
+            city_name=city,
+        )
+        oaq = OpenAQProvider(
+            location_id=loc.get("openaq_location_id"),
+            city_name=city,
+        )
+        aqicn = AQICNProvider(
+            station=str(loc.get("aqicn_station") or ""),
+            city_name=city,
+        )
+
+        # Fetch
+        try:
+            om_df = om.run()
+            logger.info("  %s Open-Meteo: %d rows", city, len(om_df))
+        except Exception as e:
+            logger.warning("  %s Open-Meteo failed: %s", city, e)
+            om_df = pd.DataFrame()
+
+        try:
+            oaq_df = oaq.run()
+            logger.info("  %s OpenAQ: %d rows", city, len(oaq_df))
+        except Exception as e:
+            logger.warning("  %s OpenAQ failed: %s", city, e)
+            oaq_df = pd.DataFrame()
+
+        try:
+            aq_df = aqicn.run()
+            logger.info("  %s AQICN: %d rows", city, len(aq_df))
+        except Exception as e:
+            logger.warning("  %s AQICN failed: %s", city, e)
+            aq_df = pd.DataFrame()
+
+        # Merge
+        observed_dfs = []
+        for source_df in [oaq_df, aq_df]:
+            if not source_df.empty:
+                observed_dfs.append(source_df)
+
+        if om_df.empty:
+            logger.warning("  %s: No data available", city)
+            return pd.DataFrame()
+
+        merged = self.merge(om_df, observed_dfs)
+        if not merged.empty:
+            merged["city"] = city
+        return merged
+
+    def fetch_all_multi(self) -> pd.DataFrame:
+        """Fetch data from all configured locations and combine.
+
+        Returns:
+            Combined DataFrame with 'city' column identifying each row's city.
+        """
+        if not self.locations:
+            logger.info("No locations configured — falling back to single-city fetch")
+            return self.run_full_cycle()
+
+        all_dfs = []
+        for loc in self.locations:
+            df = self.fetch_all_for_location(loc)
+            if not df.empty:
+                all_dfs.append(df)
+
+        if not all_dfs:
+            logger.warning("No data from any location")
+            return pd.DataFrame()
+
+        combined = pd.concat(all_dfs, ignore_index=True)
+        combined = combined.sort_values(["city", "timestamp"]).reset_index(drop=True)
+        logger.info("Multi-city fetch complete: %d rows, cities: %s",
+                     len(combined), combined["city"].unique().tolist() if "city" in combined.columns else "N/A")
+        return combined

@@ -8,6 +8,23 @@ city:
   longitude: 68.357
   timezone: Asia/Karachi
 
+# Multi-city locations — used by orchestrator for combined training
+locations:
+  - name: Hyderabad
+    country: Pakistan
+    latitude: 25.396
+    longitude: 68.357
+    timezone: Asia/Karachi
+    openaq_location_id: 4889110
+    aqicn_station: A546205
+  - name: Karachi
+    country: Pakistan
+    latitude: 24.868
+    longitude: 67.082
+    timezone: Asia/Karachi
+    openaq_location_id: 4791924
+    aqicn_station: null
+
 providers:
   open_meteo:
     base_url: https://air-quality-api.open-meteo.com/v1/air-quality

@@ -13,10 +13,11 @@ from utils.time_utils import floor_hour, now_local, utc_to_local
 
 
 class OpenMeteoProvider(BaseProvider):
-    def __init__(self):
+    def __init__(self, lat: float = None, lon: float = None, city_name: str = None):
         super().__init__("open_meteo")
-        self.lat = get("city.latitude", 25.396)
-        self.lon = get("city.longitude", 68.357)
+        self.lat = lat or get("city.latitude", 25.396)
+        self.lon = lon or get("city.longitude", 68.357)
+        self.city_name = city_name or get("city.name", "Hyderabad")
         self.tz = get("city.timezone", "Asia/Karachi")
         self.air_quality_url = get(
             "providers.open_meteo.base_url",
@@ -133,6 +134,7 @@ class OpenMeteoProvider(BaseProvider):
             df["timestamp"] = floor_hour(now_local())
 
         df["source"] = "open_meteo"
+        df["city"] = self.city_name
         df["latitude"] = self.lat
         df["longitude"] = self.lon
         df["fetched_at"] = raw.get("fetched_at", datetime.now().isoformat())

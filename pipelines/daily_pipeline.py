@@ -204,36 +204,59 @@ def run_daily_pipeline() -> dict:
             # Run inference on the latest data to produce forecast
             try:
                 from models.inference import InferenceEngine
+                from pipelines.hourly_pipeline import _to_json_safe, _embed_history_from_df
+
                 engine = InferenceEngine()
                 engine.model = best_model  # Use full wrapper (baselines have .model=None)
-                forecast = engine.predict(train_df.tail(200))  # Use last 200 rows for lag features
 
-                # Embed weather + pollutant data into forecast for dashboard
-                from pipelines.hourly_pipeline import _to_json_safe
-                latest_row = train_df.iloc[-1] if len(train_df) > 0 else None
-                if latest_row is not None:
-                    forecast["weather"] = {
-                        "temperature": _to_json_safe(latest_row.get("temperature_2m")),
-                        "humidity": _to_json_safe(latest_row.get("relative_humidity_2m")),
-                        "pressure": _to_json_safe(latest_row.get("pressure_msl")),
-                        "wind_speed": _to_json_safe(latest_row.get("wind_speed_10m")),
-                        "wind_direction": _to_json_safe(latest_row.get("wind_direction_10m")),
-                        "precipitation": _to_json_safe(latest_row.get("precipitation")),
-                        "cloud_cover": _to_json_safe(latest_row.get("cloud_cover")),
-                    }
-                    forecast["pollutants"] = {
-                        "pm2_5": _to_json_safe(latest_row.get("pm2_5")),
-                        "pm10": _to_json_safe(latest_row.get("pm10")),
-                        "no2": _to_json_safe(latest_row.get("no2")),
-                        "o3": _to_json_safe(latest_row.get("o3")),
-                        "so2": _to_json_safe(latest_row.get("so2")),
-                        "co": _to_json_safe(latest_row.get("co")),
-                    }
-                    forecast["station"] = str(latest_row.get("station_name") or "OpenAQ/4889110")
+                # Multi-city: generate per-city forecasts
+                cities = train_df["city"].unique().tolist() if "city" in train_df.columns else [None]
+                city_forecasts = {}
 
-                # Build history from training DataFrame (always available on CI)
-                from pipelines.hourly_pipeline import _embed_history_from_df
-                _embed_history_from_df(forecast, train_df)
+                for city_name in cities:
+                    if city_name is not None:
+                        city_df = train_df[train_df["city"] == city_name]
+                    else:
+                        city_df = train_df
+
+                    if city_df.empty:
+                        continue
+
+                    fc = engine.predict(city_df.tail(200))
+
+                    # Embed weather + pollutant data
+                    latest_row = city_df.iloc[-1] if len(city_df) > 0 else None
+                    if latest_row is not None:
+                        fc["weather"] = {
+                            "temperature": _to_json_safe(latest_row.get("temperature_2m")),
+                            "humidity": _to_json_safe(latest_row.get("relative_humidity_2m")),
+                            "pressure": _to_json_safe(latest_row.get("pressure_msl")),
+                            "wind_speed": _to_json_safe(latest_row.get("wind_speed_10m")),
+                            "wind_direction": _to_json_safe(latest_row.get("wind_direction_10m")),
+                            "precipitation": _to_json_safe(latest_row.get("precipitation")),
+                            "cloud_cover": _to_json_safe(latest_row.get("cloud_cover")),
+                        }
+                        fc["pollutants"] = {
+                            "pm2_5": _to_json_safe(latest_row.get("pm2_5")),
+                            "pm10": _to_json_safe(latest_row.get("pm10")),
+                            "no2": _to_json_safe(latest_row.get("no2")),
+                            "o3": _to_json_safe(latest_row.get("o3")),
+                            "so2": _to_json_safe(latest_row.get("so2")),
+                            "co": _to_json_safe(latest_row.get("co")),
+                        }
+                        fc["station"] = str(latest_row.get("station_name") or "OpenAQ")
+
+                    fc["city"] = city_name
+                    _embed_history_from_df(fc, city_df)
+                    city_forecasts[city_name or "default"] = fc
+                    logger.info("  %s: current_aqi=%.1f", city_name or "default", fc.get("current_aqi", 0))
+
+                # Build combined forecast JSON
+                if len(city_forecasts) == 1:
+                    forecast = list(city_forecasts.values())[0]
+                else:
+                    primary = list(city_forecasts.values())[0]
+                    forecast = {**primary, "cities": city_forecasts}
 
                 save_json(forecast, DATA_DIR / "processed" / "predictions" / "forecast_latest.json")
                 logger.info("Forecast generated and saved")

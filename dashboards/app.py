@@ -45,7 +45,8 @@ def internal_error(e):
         aqi={"aqi": None, "category": "No Data", "category_color": "#666",
              "health_advice": "Dashboard encountered an error. Data will refresh on next pipeline run.",
              "weather": None, "pm2_5": None, "pm10": None, "dominant_pollutant": "--", "updated_at": None},
-        forecast={}, alerts=[], city=get("city.name", "Hyderabad")), 200
+        forecast={}, alerts=[], city=get("city.name", "Hyderabad"),
+        cities=[], current_city=None), 200
 
 
 def _load_json(path: Path) -> dict:
@@ -58,6 +59,30 @@ def _load_json(path: Path) -> dict:
 
 def _load_forecast() -> dict:
     return _load_json(FORECAST_PATH)
+
+
+def _get_available_cities(forecast: dict) -> list:
+    """Get list of available cities from forecast JSON."""
+    cities_dict = forecast.get("cities", {})
+    if cities_dict:
+        return list(cities_dict.keys())
+    city = forecast.get("city")
+    if city:
+        return [city]
+    return [get("city.name", "Hyderabad")]
+
+
+def _get_city_forecast(city: str = None) -> dict:
+    """Get forecast for a specific city. Falls back to primary forecast."""
+    forecast = _load_forecast()
+    if not city:
+        return forecast
+    cities_dict = forecast.get("cities", {})
+    if city in cities_dict:
+        return cities_dict[city]
+    if forecast.get("city") == city:
+        return forecast
+    return forecast
 
 
 def _load_history_from_forecast(hours: int = 168) -> list:
@@ -139,7 +164,12 @@ def _load_alerts(limit: int = 10) -> list:
 
 @app.route("/")
 def home():
-    forecast = _load_forecast()
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+    forecast = _get_city_forecast(selected_city)
+
     merged = _load_merged(hours=24)
     alerts = _load_alerts(3)
 
@@ -200,13 +230,20 @@ def home():
         aqi=aqi_data,
         forecast=forecast,
         alerts=alerts,
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/forecast")
 def forecast():
-    forecast = _load_forecast()
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+    fc = _get_city_forecast(selected_city)
+
     history = _load_merged(hours=168)
     merged = _load_merged(hours=1)
     pollutants = {}
@@ -224,27 +261,39 @@ def forecast():
 
     return render_template(
         "forecast.html",
-        forecast=forecast,
+        forecast=fc,
         history=history,
         pollutants=pollutants,
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/analytics")
 def analytics():
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+
     history = _load_merged(hours=720)
     return render_template(
         "analytics.html",
         history=history,
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/explainability")
 def explainability():
-    # Try forecast JSON first (always available), then parquet fallback
-    forecast = _load_forecast()
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+    forecast = _get_city_forecast(selected_city)
     merged = _load_merged(hours=168)
     explanation = {"top_drivers": [], "natural_language": "", "method": "none"}
 
@@ -342,12 +391,19 @@ def explainability():
         "explainability.html",
         explanation=explanation,
         importance={"features": explanation.get("global_importance", []), "method": explanation.get("method")},
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/pipeline")
 def pipeline():
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+
     hourly = _load_json(PIPELINE_PATH)
     daily = _load_json(DAILY_PATH)
 
@@ -363,8 +419,7 @@ def pipeline():
             pass
 
     if freshness == "no_data":
-        forecast = _load_forecast()
-        ts = forecast.get("timestamp")
+        ts = forecast_all.get("timestamp")
         if ts:
             freshness = ts
 
@@ -378,12 +433,18 @@ def pipeline():
                 "status": "healthy" if freshness != "no_data" else "no_data",
             },
         },
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/data-sources")
 def data_sources():
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
     sources = {
         "providers": [
             {
@@ -424,13 +485,20 @@ def data_sources():
     return render_template(
         "data_sources.html",
         sources=sources,
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/digital-twin")
 def digital_twin():
-    forecast = _load_forecast()
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+    forecast = _get_city_forecast(selected_city)
+
     merged = _load_merged(hours=1)
     pollutants = {}
     if merged:
@@ -444,13 +512,23 @@ def digital_twin():
         "digital_twin.html",
         forecast=forecast,
         pollutants=pollutants,
-        city=get("city.name", "Hyderabad"),
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
     )
 
 
 @app.route("/settings")
 def settings():
-    return render_template("settings.html", city=get("city.name", "Hyderabad"))
+    from flask import request as flask_request
+    forecast_all = _load_forecast()
+    available_cities = _get_available_cities(forecast_all)
+    selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
+    return render_template("settings.html",
+        city=selected_city or get("city.name", "Hyderabad"),
+        cities=available_cities,
+        current_city=selected_city,
+    )
 
 
 if __name__ == "__main__":

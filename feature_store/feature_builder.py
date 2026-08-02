@@ -32,6 +32,7 @@ class FeatureBuilder:
     def build_all(self) -> pd.DataFrame:
         """Run all feature groups in sequence."""
         self._add_time_features()
+        self._add_city_feature()
         self._add_lag_features()
         self._add_rolling_features()
         self._add_weather_features()
@@ -59,6 +60,15 @@ class FeatureBuilder:
         self.df["month_cos"] = np.cos(2 * np.pi * self.df["month"] / 12)
         self.df["day_of_week_sin"] = np.sin(2 * np.pi * self.df["day_of_week"] / 7)
         self.df["day_of_week_cos"] = np.cos(2 * np.pi * self.df["day_of_week"] / 7)
+
+    def _add_city_feature(self) -> None:
+        """Encode city column as numeric feature for multi-city training."""
+        if "city" not in self.df.columns:
+            return
+        cities = self.df["city"].dropna().unique()
+        city_map = {name: i for i, name in enumerate(sorted(cities))}
+        self.df["city_encoded"] = self.df["city"].map(city_map).fillna(0).astype(int)
+        logger.info("City feature added: %s", city_map)
 
     def _get_aqi_col(self) -> str:
         """Return the best available AQI column to use as label."""

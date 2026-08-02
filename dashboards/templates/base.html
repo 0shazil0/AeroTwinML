@@ -24,7 +24,15 @@
             <span class="brand-name">AQI Predictor</span>
         </div>
         <div class="nav-info">
+            {% if cities is defined and cities|length > 1 %}
+            <select id="city-selector" class="city-select" onchange="switchCity(this.value)">
+                {% for c in cities %}
+                <option value="{{ c }}" {% if c == current_city %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
             <span class="nav-city">{{ city }}, Pakistan</span>
+            {% endif %}
             <span class="nav-time" id="nav-time">--</span>
             <span class="nav-status" id="nav-status">
                 <span class="status-dot"></span> Live
@@ -88,6 +96,13 @@
         }
         function dismissAlert() {
             document.getElementById('alert-banner').classList.add('hidden');
+        }
+
+        // City selector
+        function switchCity(city) {
+            const url = new URL(window.location);
+            url.searchParams.set('city', city);
+            window.location.href = url.toString();
         }
 
         // Auto-refresh status

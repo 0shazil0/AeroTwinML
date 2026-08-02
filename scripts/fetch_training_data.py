@@ -44,6 +44,30 @@ OPENMETEO_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
 OPENAQ_BASE = "https://api.openaq.org/v3"
 
 
+def load_locations() -> list:
+    """Load locations from settings.yaml, fall back to single-city env vars."""
+    try:
+        import yaml
+        config_path = Path("configs/settings.yaml")
+        if config_path.exists():
+            with open(config_path) as f:
+                cfg = yaml.safe_load(f)
+            locs = cfg.get("locations", [])
+            if locs:
+                return locs
+    except Exception:
+        pass
+    # Fallback: single city from env vars
+    return [{
+        "name": os.getenv("CITY_NAME") or "Hyderabad",
+        "latitude": LAT,
+        "longitude": LON,
+        "timezone": TZ,
+        "openaq_location_id": OPENAQ_LOCATION_ID,
+        "aqicn_station": AQICN_STATION,
+    }]
+
+
 def fetch_openmeteo(start: str, end: str) -> Optional[pd.DataFrame]:
     """Fetch historical weather from Open-Meteo Archive API."""
     print(f"\n[Open-Meteo] Fetching weather: {start} -> {end}")
@@ -381,31 +405,92 @@ Examples:
         end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=int(args.years * 365) + 1)).strftime("%Y-%m-%d")
 
+    locations = load_locations()
+    global LAT, LON, TZ, OPENAQ_LOCATION_ID, AQICN_STATION
     print("=" * 60)
     print("  AeroTwinML -- Training Data Acquisition")
     print(f"  Range: {start_date} -> {end_date}")
-    print(f"  Location: {LAT}, {LON} | TZ: {TZ}")
+    print(f"  Locations: {[loc.get('name') for loc in locations]}")
     print("=" * 60)
 
-    weather_df = None
-    openaq_df = None
-    aqicn_df = None
+    all_city_dfs = []
 
-    if args.provider in ("all", "openmeteo"):
-        weather_df = fetch_openmeteo(start_date, end_date)
+    for loc in locations:
+        city_name = loc.get("name", "Unknown")
+        lat = loc.get("latitude", LAT)
+        lon = loc.get("longitude", LON)
+        tz = loc.get("timezone", TZ)
+        oa_loc_id = loc.get("openaq_location_id", OPENAQ_LOCATION_ID)
+        aqicn_st = loc.get("aqicn_station")
 
-    if args.provider in ("all", "openaq"):
-        openaq_df = fetch_openaq_all(start_date, end_date)
+        print(f"\n{'='*60}")
+        print(f"  City: {city_name} ({lat}, {lon})")
+        print(f"{'='*60}")
 
-    # Always pull AQICN for secondary pollutant coverage (PM10, NO2, O3, etc.)
-    aqicn_df = fetch_aqicn_latest()
+        # Update module-level config for the fetch functions
+        LAT, LON, TZ = lat, lon, tz
+        OPENAQ_LOCATION_ID = oa_loc_id
+        if aqicn_st:
+            AQICN_STATION = str(aqicn_st)
 
-    if weather_df is not None:
-        merge_and_save(weather_df, openaq_df, aqicn_df, start_date, end_date)
-    elif openaq_df is not None:
-        merge_and_save(openaq_df, None, aqicn_df, start_date, end_date)
-    elif aqicn_df is not None:
-        merge_and_save(aqicn_df, None, None, start_date, end_date)
+        weather_df = None
+        openaq_df = None
+        aqicn_df = None
+
+        if args.provider in ("all", "openmeteo"):
+            weather_df = fetch_openmeteo(start_date, end_date)
+
+        if args.provider in ("all", "openaq"):
+            openaq_df = fetch_openaq_all(start_date, end_date)
+
+        if aqicn_st and str(aqicn_st) != "null":
+            aqicn_df = fetch_aqicn_latest()
+
+        # Build city DataFrame
+        city_df = None
+        if weather_df is not None:
+            if openaq_df is not None and not openaq_df.empty:
+                city_df = pd.merge(weather_df, openaq_df, on="timestamp", how="left")
+            else:
+                city_df = weather_df.copy()
+
+            if aqicn_df is not None and not aqicn_df.empty:
+                if "timestamp" in aqicn_df.columns:
+                    aqicn_df["timestamp"] = pd.to_datetime(aqicn_df["timestamp"])
+                    city_df = pd.merge(city_df, aqicn_df, on="timestamp", how="left", suffixes=("", "_aqicn"))
+                    for col in ["aqi", "pm2_5", "pm10", "no2", "o3", "so2", "co"]:
+                        aqicn_col = f"{col}_aqicn"
+                        if aqicn_col in city_df.columns and col in city_df.columns:
+                            city_df[col] = city_df[col].fillna(city_df[aqicn_col])
+                            city_df.drop(columns=[aqicn_col], inplace=True)
+                        elif aqicn_col in city_df.columns:
+                            city_df.rename(columns={aqicn_col: col}, inplace=True)
+        elif openaq_df is not None:
+            city_df = openaq_df.copy()
+
+        if city_df is not None and not city_df.empty:
+            city_df["city"] = city_name
+            label_count = city_df["aqi"].notna().sum() if "aqi" in city_df.columns else 0
+            print(f"\n  {city_name}: {len(city_df)} rows, {label_count} with observed AQI")
+            all_city_dfs.append(city_df)
+        else:
+            print(f"\n  {city_name}: No data fetched")
+
+    if all_city_dfs:
+        combined = pd.concat(all_city_dfs, ignore_index=True)
+        combined = combined.sort_values(["city", "timestamp"]).reset_index(drop=True)
+
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        filename = f"training_data_{start_date}_{end_date}.csv"
+        path = OUTPUT_DIR / filename
+        combined.to_csv(path, index=False)
+
+        total_labels = combined["aqi"].notna().sum() if "aqi" in combined.columns else 0
+        print(f"\n{'='*60}")
+        print(f"  Combined: {len(combined)} rows, {total_labels} with observed AQI")
+        print(f"  Cities: {combined['city'].unique().tolist()}")
+        print(f"  Saved: {path}")
+        print(f"{'='*60}")
     else:
         print("\nFAILED: No data fetched -- check API keys and network")
 
