@@ -1,6 +1,6 @@
 {
   "pipeline": "hourly",
-  "started_at": "2026-08-02T19:19:23.490603+05:00",
+  "started_at": "2026-08-03T10:48:22.638044+05:00",
   "steps": {
     "ingestion": {
       "status": "ok",
@@ -13,8 +13,8 @@
     },
     "inference": {
       "status": "ok",
-      "current_aqi": 79.0,
-      "forecast_24h": 79.0
+      "current_aqi": 45.0,
+      "forecast_24h": 83.0
     },
     "alerts": {
       "status": "ok",
@@ -27,5 +27,5 @@
   },
   "success": true,
   "backend": "hopsworks",
-  "completed_at": "2026-08-02T19:19:35.809292+05:00"
+  "completed_at": "2026-08-03T10:48:33.277604+05:00"
 }
