@@ -1,0 +1,165 @@
+{
+  "trained_at": "2026-08-07T17:38:44.156931+05:00",
+  "n_train_rows": 7881,
+  "n_test_rows": 1971,
+  "n_features": 49,
+  "best_model": "random_forest",
+  "best_horizon": "24h",
+  "per_horizon_best": {
+    "24h": {
+      "model_name": "random_forest",
+      "rmse": 34.535,
+      "mae": 27.213,
+      "r2": 0.402
+    },
+    "48h": {
+      "model_name": "ridge",
+      "rmse": 35.841,
+      "mae": 28.454,
+      "r2": 0.357
+    },
+    "72h": {
+      "model_name": "lightgbm",
+      "rmse": 38.733,
+      "mae": 30.842,
+      "r2": 0.262
+    }
+  },
+  "all_models": {
+    "24h_ridge": {
+      "horizon": "24h",
+      "model_name": "ridge",
+      "metrics": {
+        "rmse_24h": 34.815227543172995,
+        "mae_24h": 27.633905956089926,
+        "r2_24h": 0.3921968484301015
+      }
+    },
+    "24h_random_forest": {
+      "horizon": "24h",
+      "model_name": "random_forest",
+      "metrics": {
+        "rmse_24h": 34.53535644093122,
+        "mae_24h": 27.21317845676267,
+        "r2_24h": 0.4019295330912076
+      }
+    },
+    "24h_gradient_boosting": {
+      "horizon": "24h",
+      "model_name": "gradient_boosting",
+      "metrics": {
+        "rmse_24h": 38.7827272050638,
+        "mae_24h": 30.420191036115675,
+        "r2_24h": 0.2457745850589359
+      }
+    },
+    "24h_xgboost": {
+      "horizon": "24h",
+      "model_name": "xgboost",
+      "metrics": {
+        "rmse_24h": 35.68448726546162,
+        "mae_24h": 28.249381553769894,
+        "r2_24h": 0.36146693133025276
+      }
+    },
+    "24h_lightgbm": {
+      "horizon": "24h",
+      "model_name": "lightgbm",
+      "metrics": {
+        "rmse_24h": 35.68346593693571,
+        "mae_24h": 28.161445020415456,
+        "r2_24h": 0.36150348181787895
+      }
+    },
+    "48h_ridge": {
+      "horizon": "48h",
+      "model_name": "ridge",
+      "metrics": {
+        "rmse_48h": 35.84056236693044,
+        "mae_48h": 28.45393924744787,
+        "r2_48h": 0.35704535601868126
+      }
+    },
+    "48h_random_forest": {
+      "horizon": "48h",
+      "model_name": "random_forest",
+      "metrics": {
+        "rmse_48h": 39.329276301437744,
+        "mae_48h": 32.01005535541363,
+        "r2_48h": 0.22578315429147977
+      }
+    },
+    "48h_gradient_boosting": {
+      "horizon": "48h",
+      "model_name": "gradient_boosting",
+      "metrics": {
+        "rmse_48h": 36.87148290611439,
+        "mae_48h": 29.165819654957723,
+        "r2_48h": 0.3195254052693134
+      }
+    },
+    "48h_xgboost": {
+      "horizon": "48h",
+      "model_name": "xgboost",
+      "metrics": {
+        "rmse_48h": 38.53280712800574,
+        "mae_48h": 30.40012363018977,
+        "r2_48h": 0.2568234391724604
+      }
+    },
+    "48h_lightgbm": {
+      "horizon": "48h",
+      "model_name": "lightgbm",
+      "metrics": {
+        "rmse_48h": 38.053446153695496,
+        "mae_48h": 30.07483664659476,
+        "r2_48h": 0.2751991524020667
+      }
+    },
+    "72h_ridge": {
+      "horizon": "72h",
+      "model_name": "ridge",
+      "metrics": {
+        "rmse_72h": 39.38838393767284,
+        "mae_72h": 31.999582465063973,
+        "r2_72h": 0.23642263671491004
+      }
+    },
+    "72h_random_forest": {
+      "horizon": "72h",
+      "model_name": "random_forest",
+      "metrics": {
+        "rmse_72h": 40.04265015786744,
+        "mae_72h": 32.950030871111736,
+        "r2_72h": 0.2108449399271125
+      }
+    },
+    "72h_gradient_boosting": {
+      "horizon": "72h",
+      "model_name": "gradient_boosting",
+      "metrics": {
+        "rmse_72h": 40.46187460934235,
+        "mae_72h": 32.70996550148566,
+        "r2_72h": 0.19423440511670875
+      }
+    },
+    "72h_xgboost": {
+      "horizon": "72h",
+      "model_name": "xgboost",
+      "metrics": {
+        "rmse_72h": 43.1192758569755,
+        "mae_72h": 34.90559624210617,
+        "r2_72h": 0.08491879092159182
+      }
+    },
+    "72h_lightgbm": {
+      "horizon": "72h",
+      "model_name": "lightgbm",
+      "metrics": {
+        "rmse_72h": 38.7327773119516,
+        "mae_72h": 30.84165331849337,
+        "r2_72h": 0.26163007683685136
+      }
+    }
+  }
+}
