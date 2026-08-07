@@ -170,57 +170,62 @@ def build_models_for_horizons(
     train_df: pd.DataFrame,
     test_df: pd.DataFrame,
 ) -> Dict[str, Any]:
-    """Train multiple model types across all horizons."""
+    """Train multiple model types across all horizons with proper feature-target alignment."""
     from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
     from sklearn.linear_model import Ridge
-
-    # Prepare data
-    X_train = train_df[feature_cols].fillna(0).values
-    X_test = test_df[feature_cols].fillna(0).values
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
 
     results = {}
     model_classes = {
-        "ridge": lambda: SklearnWrapper("ridge", Ridge(alpha=1.0)),
-        "random_forest": lambda: SklearnWrapper("random_forest", RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)),
-        "gradient_boosting": lambda: SklearnWrapper("gradient_boosting", GradientBoostingRegressor(n_estimators=100, max_depth=5, random_state=42)),
+        "ridge": lambda: SklearnWrapper("ridge", make_pipeline(StandardScaler(), Ridge(alpha=10.0))),
+        "random_forest": lambda: SklearnWrapper("random_forest", RandomForestRegressor(n_estimators=100, max_depth=8, random_state=42)),
+        "gradient_boosting": lambda: SklearnWrapper("gradient_boosting", GradientBoostingRegressor(n_estimators=100, max_depth=4, random_state=42)),
     }
 
     # Try XGBoost and LightGBM if available
     try:
         import xgboost as xgb
-        model_classes["xgboost"] = lambda: SklearnWrapper("xgboost", xgb.XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42))
+        model_classes["xgboost"] = lambda: SklearnWrapper("xgboost", xgb.XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.08, random_state=42))
     except ImportError:
         logger.warning("XGBoost not installed")
 
     try:
         import lightgbm as lgb
-        model_classes["lightgbm"] = lambda: SklearnWrapper("lightgbm", lgb.LGBMRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42, verbose=-1))
+        model_classes["lightgbm"] = lambda: SklearnWrapper("lightgbm", lgb.LGBMRegressor(n_estimators=100, max_depth=6, learning_rate=0.08, random_state=42, verbose=-1))
     except ImportError:
         logger.warning("LightGBM not installed")
 
-    # Baselines — create NEW instances per horizon to avoid mutation
     for horizon_key, target_col in target_cols.items():
-        y_train = train_df[target_col].dropna()
-        y_test = test_df[target_col].dropna()
-
-        # Align indices
-        common_train = X_train[:len(y_train)], y_train.values
-        common_test = X_test[:len(y_test)], y_test.values
-
-        if len(common_train[1]) == 0 or len(common_test[1]) == 0:
-            logger.warning("Skipping horizon %s — insufficient data", horizon_key)
+        # Ensure target_col exists
+        if target_col not in train_df.columns or target_col not in test_df.columns:
+            logger.warning("Target column %s missing from data — skipping %s", target_col, horizon_key)
             continue
+
+        # Correct alignment: Drop rows where target_col is NaN directly from DataFrames
+        tr_clean = train_df.dropna(subset=[target_col])
+        te_clean = test_df.dropna(subset=[target_col])
+
+        if len(tr_clean) < 10 or len(te_clean) < 5:
+            logger.warning("Skipping horizon %s — insufficient clean data (%d train, %d test)",
+                           horizon_key, len(tr_clean), len(te_clean))
+            continue
+
+        X_tr = tr_clean[feature_cols].fillna(0).values
+        y_tr = tr_clean[target_col].values
+        X_te = te_clean[feature_cols].fillna(0).values
+        y_te = te_clean[target_col].values
 
         horizon_results = {}
 
-        # Baselines — fresh instances per horizon
+        # Baselines
         baselines = {
             "persistence": PersistenceModel(),
             "seasonal_naive": SeasonalNaiveModel(),
         }
         for bname, bmodel in baselines.items():
-            bmodel.fit(common_train[0], common_train[1])
-            metrics = evaluate_model(bmodel, common_test[0], common_test[1])
+            bmodel.fit(X_tr, y_tr)
+            metrics = evaluate_model(bmodel, X_te, y_te)
             horizon_results[bname] = {
                 "horizon": horizon_key,
                 "model_name": bname,
@@ -233,10 +238,10 @@ def build_models_for_horizons(
             try:
                 result = train_and_evaluate_horizon(
                     mfactory,
-                    common_train[0],
-                    common_train[1],
-                    common_test[0],
-                    common_test[1],
+                    X_tr,
+                    y_tr,
+                    X_te,
+                    y_te,
                     horizon_key,
                 )
                 horizon_results[mname] = result

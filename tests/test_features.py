@@ -84,3 +84,23 @@ class TestFeatureBuilder:
 
         assert result["hour_sin"].between(-1, 1).all()
         assert result["hour_cos"].between(-1, 1).all()
+
+    def test_multicity_isolation(self, sample_df):
+        # Create a combined multi-city DataFrame
+        df1 = sample_df.copy()
+        df1["city"] = "Hyderabad"
+        df2 = sample_df.copy()
+        df2["city"] = "Karachi"
+        df2["aqi"] += 100  # distinct values for Karachi
+
+        combined = pd.concat([df1, df2], ignore_index=True)
+        builder = FeatureBuilder(combined)
+        result = builder.build_all()
+
+        # Check that the chronologically first row of Karachi does NOT use Hyderabad's last row as lag_1
+        karachi_df = result[result["city"] == "Karachi"]
+        assert pd.isna(karachi_df["aqi_lag_1"].iloc[0])
+
+        # Check target_aqi_24h for Hyderabad's chronologically last row is NaN, not Karachi's first row
+        hyd_df = result[result["city"] == "Hyderabad"]
+        assert pd.isna(hyd_df["target_aqi_24h"].iloc[-1])

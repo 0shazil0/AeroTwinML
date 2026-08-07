@@ -74,3 +74,32 @@ class TestWalkForwardSplit:
             assert len(train) > 0
             assert len(test) > 0
             assert len(train) + len(test) <= 100
+
+
+class TestInferenceEngine:
+    def test_per_horizon_inference_when_single_model_is_none(self):
+        import pandas as pd
+        from models.inference import InferenceEngine
+
+        class DummyHorizonModel:
+            def __init__(self, pred_val):
+                self.pred_val = pred_val
+
+            def predict(self, X):
+                return np.array([self.pred_val])
+
+        engine = InferenceEngine()
+        engine.model = None
+        engine.models_by_horizon = {
+            "24h": {"model": DummyHorizonModel(42.0), "model_name": "dummy_24"},
+            "48h": {"model": DummyHorizonModel(55.0), "model_name": "dummy_48"},
+            "72h": {"model": DummyHorizonModel(68.0), "model_name": "dummy_72"},
+        }
+
+        df = pd.DataFrame({"aqi": [50.0], "temperature_2m": [25.0]})
+        fc = engine.predict(df)
+
+        assert fc["model_info"]["type"] == "per_horizon"
+        assert fc["forecast"]["24h"]["aqi"] == 42.0
+        assert fc["forecast"]["48h"]["aqi"] == 55.0
+        assert fc["forecast"]["72h"]["aqi"] == 68.0

@@ -85,14 +85,17 @@ def _get_city_forecast(city: str = None) -> dict:
     return forecast
 
 
-def _load_history_from_forecast(hours: int = 168) -> list:
+def _load_history_from_forecast(hours: int = 168, city: str = None) -> list:
     """Load history from forecast JSON's embedded history array.
 
     This is the primary source when parquet is unavailable (e.g. on deployment).
     """
     try:
-        forecast = _load_forecast()
+        forecast = _get_city_forecast(city) if city else _load_forecast()
         history = forecast.get("history", [])
+        if not history and city:
+            # Fall back to primary history if city-specific history is absent
+            history = _load_forecast().get("history", [])
         if not history:
             return []
 
@@ -115,11 +118,13 @@ def _load_history_from_forecast(hours: int = 168) -> list:
         return []
 
 
-def _load_merged(hours: int = 168) -> list:
+def _load_merged(hours: int = 168, city: str = None) -> list:
     """Load history data — tries parquet first, falls back to forecast JSON."""
     try:
         df = pd.read_parquet(MERGED_PATH)
-        if "timestamp" in df.columns:
+        if city and "city" in df.columns:
+            df = df[df["city"] == city]
+        if "timestamp" in df.columns and not df.empty:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
             cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
             # Ensure timestamps are tz-aware for comparison
@@ -128,6 +133,8 @@ def _load_merged(hours: int = 168) -> list:
             else:
                 df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
             df = df[df["timestamp"] >= cutoff]
+        if df.empty:
+            return _load_history_from_forecast(hours, city=city)
         # Convert to JSON-safe format
         records = df.tail(hours * 2).to_dict(orient="records")
         for r in records:
@@ -143,7 +150,7 @@ def _load_merged(hours: int = 168) -> list:
         return records
     except (FileNotFoundError, Exception):
         # Fallback: read from embedded history in forecast JSON
-        return _load_history_from_forecast(hours)
+        return _load_history_from_forecast(hours, city=city)
 
 
 def _load_alerts(limit: int = 10) -> list:
@@ -170,7 +177,7 @@ def home():
     selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
     forecast = _get_city_forecast(selected_city)
 
-    merged = _load_merged(hours=24)
+    merged = _load_merged(hours=24, city=selected_city)
     alerts = _load_alerts(3)
 
     current_aqi = forecast.get("current_aqi", 0)
@@ -190,7 +197,7 @@ def home():
     # Weather from forecast JSON (embedded by daily pipeline) or from merged parquet
     weather = forecast.get("weather")
     if weather is None:
-        merged = _load_merged(hours=1)
+        merged = _load_merged(hours=1, city=selected_city)
         if merged:
             latest = merged[-1]
             weather = {
@@ -244,8 +251,8 @@ def forecast():
     selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
     fc = _get_city_forecast(selected_city)
 
-    history = _load_merged(hours=168)
-    merged = _load_merged(hours=1)
+    history = _load_merged(hours=168, city=selected_city)
+    merged = _load_merged(hours=1, city=selected_city)
     pollutants = {}
     if merged:
         latest = merged[-1]
@@ -277,7 +284,7 @@ def analytics():
     available_cities = _get_available_cities(forecast_all)
     selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
 
-    history = _load_merged(hours=720)
+    history = _load_merged(hours=720, city=selected_city)
     return render_template(
         "analytics.html",
         history=history,
@@ -294,7 +301,7 @@ def explainability():
     available_cities = _get_available_cities(forecast_all)
     selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
     forecast = _get_city_forecast(selected_city)
-    merged = _load_merged(hours=168)
+    merged = _load_merged(hours=168, city=selected_city)
     explanation = {"top_drivers": [], "natural_language": "", "method": "none"}
 
     # Build a DataFrame from whatever data is available

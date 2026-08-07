@@ -150,6 +150,21 @@ class IngestionOrchestrator:
                 elif new_col in merged.columns:
                     merged.rename(columns={new_col: col}, inplace=True)
 
+        # Ensure aqi, pm2_5, pm10 columns exist and have fallback values if observed sources are absent
+        if "aqi" not in merged.columns or merged["aqi"].notna().sum() == 0:
+            if "om_forecast_aqi" in merged.columns:
+                merged["aqi"] = merged["om_forecast_aqi"]
+            elif "us_aqi" in merged.columns:
+                merged["aqi"] = merged["us_aqi"]
+
+        if "pm2_5" not in merged.columns or merged["pm2_5"].notna().sum() == 0:
+            if "om_forecast_pm25" in merged.columns:
+                merged["pm2_5"] = merged["om_forecast_pm25"]
+
+        if "pm10" not in merged.columns or merged["pm10"].notna().sum() == 0:
+            if "om_forecast_pm10" in merged.columns:
+                merged["pm10"] = merged["om_forecast_pm10"]
+
         merged = merged.sort_values("timestamp").reset_index(drop=True)
         merged["merged_at"] = format_iso(now_local())
 

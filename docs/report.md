@@ -132,30 +132,33 @@ Classification labels derived from regression output:
 | XGBoost | n_estimators=100, max_depth=6, lr=0.1 | Regularized boosting |
 | LightGBM | n_estimators=100, max_depth=6, lr=0.1 | Histogram-based, fast |
 
-### 5.3 Validation Strategy
+### 5.3 Validation Strategy & Scaling
 
-**Walk-forward validation** (time-series split) is used instead of random splits to prevent data leakage. Training proceeds on earlier periods, testing on subsequent windows. This properly simulates real-world forecasting where future data is unseen.
+**Walk-forward validation** (time-series split) is used instead of random splits to prevent temporal data leakage. Training proceeds on earlier periods, testing on subsequent windows.
 
-### 5.4 Metrics
+**Feature Scaling & Normalization:**
+To prevent high-magnitude meteorological features (such as `pressure_msl` ~1000 hPa) from overwhelming linear and distance-based estimators, `StandardScaler` pipelines are applied to Ridge regression, while tree models leverage scaled splits.
 
-- **RMSE** (Root Mean Squared Error) — Primary metric, penalizes large errors
-- **MAE** (Mean Absolute Error) — Interpretable
-- **R²** (Coefficient of Determination) — Variance explained
+### 5.4 Metrics & Evaluation
 
-Evaluated separately for each horizon (24h, 48h, 72h).
+- **RMSE** (Root Mean Squared Error) — Primary metric, penalizes large forecast errors
+- **MAE** (Mean Absolute Error) — Interpretable mean deviation in AQI points
+- **R²** (Coefficient of Determination) — Percentage of AQI variance explained
+
+Evaluated independently across $24\text{h}$, $48\text{h}$, and $72\text{h}$ horizons.
 
 ---
 
-## 6. Model Registry (MLflow)
+## 6. Feature Store & Model Registry (Hopsworks + MLflow)
 
-MLflow tracks:
-- Data version and feature version
-- Model parameters
-- Training date range
-- Evaluation metrics per horizon
-- Model artifacts
+### 6.1 Hopsworks Integration
+The system natively integrates with Hopsworks managed platform:
+- **Feature Store (`aqi_features` & `aqi_training_features`)**: Online/offline feature tables storing multi-city lag, rolling, weather, and interaction features.
+- **Model Registry (`aqi_forecaster`)**: Automated registration of top-performing per-horizon model artifacts.
+- **Fallback**: Fallbacks to MLflow or local version-stamped pickles when offline or credentials are unset.
 
-The best model (lowest RMSE at 24h) is registered to the MLflow Model Registry. The inference engine loads the latest registered model automatically.
+### 6.2 Multi-City Feature Engineering
+All time-series transformations (`.shift()`, `.rolling()`, `.diff()`) perform `groupby("city")` operations to guarantee zero feature or target leakage between distinct geographic locations (e.g. Hyderabad vs Karachi).
 
 ---
 

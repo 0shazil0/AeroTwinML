@@ -219,7 +219,10 @@ class OpenAQProvider(BaseProvider):
         return df
 
     def _load_from_csv(self, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
-        """Load historical data from bundled CSV."""
+        """Load historical data from bundled CSV (only applicable for location 4889110)."""
+        if self.location_id != 4889110:
+            return None
+
         # Try multiple possible locations — repo root, CWD, etc.
         candidates = [
             Path.cwd() / "openaq_location_4889110_measurments.csv",

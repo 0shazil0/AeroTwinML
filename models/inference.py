@@ -59,7 +59,7 @@ class InferenceEngine:
                 "model_info": {...}
             }
         """
-        if self.model is None:
+        if self.model is None and not self.models_by_horizon:
             logger.warning("No model loaded — using fallback")
             return self._fallback_forecast(features)
 

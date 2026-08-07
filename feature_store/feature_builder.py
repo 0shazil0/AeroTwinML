@@ -89,36 +89,49 @@ class FeatureBuilder:
         return None
 
     def _add_lag_features(self) -> None:
-        """Add lagged AQI and pollutant values."""
+        """Add lagged AQI and pollutant values (grouped by city if multi-city)."""
         aqi_col = self._get_aqi_col()
         pm25_col = self._get_pm25_col()
         pm10_col = self._get_pm10_col()
 
         lag_windows = get("pipeline.features.lag_hours", [1, 6, 24, 72])
+        has_city = "city" in self.df.columns
 
         for col, col_name in [(aqi_col, "aqi"), (pm25_col, "pm25"), (pm10_col, "pm10")]:
             if col is None:
                 continue
             for lag in lag_windows:
-                self.df[f"{col_name}_lag_{lag}"] = self.df[col].shift(lag)
+                if has_city:
+                    self.df[f"{col_name}_lag_{lag}"] = self.df.groupby("city")[col].shift(lag)
+                else:
+                    self.df[f"{col_name}_lag_{lag}"] = self.df[col].shift(lag)
 
     def _add_rolling_features(self) -> None:
-        """Add rolling statistics."""
+        """Add rolling statistics (grouped by city if multi-city)."""
         aqi_col = self._get_aqi_col()
         rolling_windows = get("pipeline.features.rolling_windows_hours", [6, 24])
 
         if aqi_col is None:
             return
 
+        has_city = "city" in self.df.columns
+
         for window in rolling_windows:
-            roll = self.df[aqi_col].rolling(window=window, min_periods=1)
-            self.df[f"aqi_roll_mean_{window}"] = roll.mean()
-            self.df[f"aqi_roll_std_{window}"] = roll.std()
-            self.df[f"aqi_roll_min_{window}"] = roll.min()
-            self.df[f"aqi_roll_max_{window}"] = roll.max()
+            if has_city:
+                grouped = self.df.groupby("city")[aqi_col]
+                self.df[f"aqi_roll_mean_{window}"] = grouped.transform(lambda x: x.rolling(window, min_periods=1).mean())
+                self.df[f"aqi_roll_std_{window}"] = grouped.transform(lambda x: x.rolling(window, min_periods=1).std())
+                self.df[f"aqi_roll_min_{window}"] = grouped.transform(lambda x: x.rolling(window, min_periods=1).min())
+                self.df[f"aqi_roll_max_{window}"] = grouped.transform(lambda x: x.rolling(window, min_periods=1).max())
+            else:
+                roll = self.df[aqi_col].rolling(window=window, min_periods=1)
+                self.df[f"aqi_roll_mean_{window}"] = roll.mean()
+                self.df[f"aqi_roll_std_{window}"] = roll.std()
+                self.df[f"aqi_roll_min_{window}"] = roll.min()
+                self.df[f"aqi_roll_max_{window}"] = roll.max()
 
     def _add_weather_features(self) -> None:
-        """Pass through and clean weather features."""
+        """Pass through and clean weather features (grouped by city if multi-city)."""
         weather_cols = [
             "temperature_2m",
             "relative_humidity_2m",
@@ -129,10 +142,13 @@ class FeatureBuilder:
             "precipitation",
             "cloud_cover",
         ]
-        # Fill missing with forward fill
+        has_city = "city" in self.df.columns
         for col in weather_cols:
             if col in self.df.columns:
-                self.df[col] = self.df[col].ffill().bfill()
+                if has_city:
+                    self.df[col] = self.df.groupby("city")[col].transform(lambda x: x.ffill().bfill())
+                else:
+                    self.df[col] = self.df[col].ffill().bfill()
 
     def _add_interaction_features(self) -> None:
         """Add engineered interaction features."""
@@ -151,26 +167,40 @@ class FeatureBuilder:
 
         aqi_col = self._get_aqi_col()
         if aqi_col and aqi_col in self.df.columns:
+            has_city = "city" in self.df.columns
             # 6-hour change rate
-            self.df["aqi_change_rate"] = self.df[aqi_col].diff(6) / 6
+            if has_city:
+                self.df["aqi_change_rate"] = self.df.groupby("city")[aqi_col].transform(lambda x: x.diff(6) / 6)
+            else:
+                self.df["aqi_change_rate"] = self.df[aqi_col].diff(6) / 6
 
     def _add_targets(self) -> None:
-        """Create future AQI targets at 24h, 48h, 72h horizons."""
+        """Create future AQI targets at 24h, 48h, 72h horizons (grouped by city if multi-city)."""
         aqi_col = self._get_aqi_col()
         pm25_col = self._get_pm25_col()
         pm10_col = self._get_pm10_col()
 
         horizons = get("pipeline.features.target_horizons_hours", [24, 48, 72])
+        has_city = "city" in self.df.columns
 
         if aqi_col:
             for h in horizons:
-                self.df[f"target_aqi_{h}h"] = self.df[aqi_col].shift(-h)
+                if has_city:
+                    self.df[f"target_aqi_{h}h"] = self.df.groupby("city")[aqi_col].shift(-h)
+                else:
+                    self.df[f"target_aqi_{h}h"] = self.df[aqi_col].shift(-h)
 
         if pm25_col:
-            self.df["target_pm25_24h"] = self.df[pm25_col].shift(-24)
+            if has_city:
+                self.df["target_pm25_24h"] = self.df.groupby("city")[pm25_col].shift(-24)
+            else:
+                self.df["target_pm25_24h"] = self.df[pm25_col].shift(-24)
 
         if pm10_col:
-            self.df["target_pm10_24h"] = self.df[pm10_col].shift(-24)
+            if has_city:
+                self.df["target_pm10_24h"] = self.df.groupby("city")[pm10_col].shift(-24)
+            else:
+                self.df["target_pm10_24h"] = self.df[pm10_col].shift(-24)
 
     def _add_classification_labels(self) -> None:
         """Add AQI category labels derived from target columns."""

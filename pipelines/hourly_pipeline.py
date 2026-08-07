@@ -117,6 +117,7 @@ def run_hourly_pipeline() -> dict:
 
             fc = engine.predict(city_featured)
             _embed_weather_and_pollutants(fc, city_merged)
+            _embed_history_from_df(fc, city_merged)
             fc["city"] = city_name
             city_forecasts[city_name or "default"] = fc
             logger.info("  %s: current_aqi=%.1f, forecast_24h=%.1f",
