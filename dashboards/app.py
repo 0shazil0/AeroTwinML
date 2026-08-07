@@ -430,6 +430,10 @@ def pipeline():
         if ts:
             freshness = ts
 
+    # Load training metrics
+    METRICS_PATH = DATA_DIR / "processed" / "training_metrics.json"
+    training_metrics = _load_json(METRICS_PATH)
+
     return render_template(
         "pipeline.html",
         pipeline={
@@ -439,6 +443,7 @@ def pipeline():
                 "latest_timestamp": freshness,
                 "status": "healthy" if freshness != "no_data" else "no_data",
             },
+            "training_metrics": training_metrics,
         },
         city=selected_city or get("city.name", "Hyderabad"),
         cities=available_cities,

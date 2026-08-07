@@ -419,25 +419,63 @@ class OpenAQProvider(BaseProvider):
         return pivoted
 
     def _estimate_aqi_from_pollutants(self, row) -> Optional[float]:
-        """Estimate AQI from individual pollutants using EPA breakpoints.
+        """Compute AQI from PM2.5 and PM10 using EPA piecewise linear breakpoint tables.
 
-        This is a simplified AQI computation. The actual AQI would require
-        piecewise linear interpolation across breakpoint tables for each pollutant.
-        Here we take the maximum of individual pollutant concentrations as a proxy.
+        Reference: https://www.airnow.gov/publications/air-quality-index/technical-assistance-document-for-reporting-the-daily-aqi/
 
-        For a proper implementation, use the EPA AQI breakpoint tables.
+        AQI = ((AQI_hi - AQI_lo) / (C_hi - C_lo)) * (C - C_lo) + AQI_lo
+        where C is the pollutant concentration, and the breakpoints are from the EPA table.
+        Returns the maximum AQI across all available pollutants (standard AQI definition).
         """
-        # Simplified: return the max normalized pollutant value
-        # PM2.5 breakpoint: 0-12=Good, 12.1-35.4=Moderate, 35.5-55.4=Unhealthy Sensitive, ...
-        # This is a rough proxy — replace with full EPA calculation for production
         pm25 = row.get("pm2_5") if isinstance(row, dict) else getattr(row, "pm2_5", None)
         pm10 = row.get("pm10") if isinstance(row, dict) else getattr(row, "pm10", None)
 
-        if pd.isna(pm25) and pd.isna(pm10):
+        # EPA PM2.5 breakpoints: (C_lo, C_hi, AQI_lo, AQI_hi)
+        PM25_BREAKPOINTS = [
+            (0.0,   12.0,   0,   50),
+            (12.1,  35.4,  51,  100),
+            (35.5,  55.4, 101,  150),
+            (55.5, 150.4, 151,  200),
+            (150.5, 250.4, 201, 300),
+            (250.5, 350.4, 301, 400),
+            (350.5, 500.4, 401, 500),
+        ]
+
+        # EPA PM10 breakpoints: (C_lo, C_hi, AQI_lo, AQI_hi)
+        PM10_BREAKPOINTS = [
+            (0,   54,   0,   50),
+            (55,  154,  51,  100),
+            (155, 254, 101,  150),
+            (255, 354, 151,  200),
+            (355, 424, 201,  300),
+            (425, 504, 301,  400),
+            (505, 604, 401,  500),
+        ]
+
+        def _linear_interpolate(c: float, breakpoints: list) -> Optional[float]:
+            """Compute AQI for a single pollutant via piecewise linear interpolation."""
+            if c is None or (isinstance(c, float) and (c != c)):  # NaN check
+                return None
+            c = round(c, 1)  # EPA truncates PM2.5 to 1 decimal
+            for c_lo, c_hi, aqi_lo, aqi_hi in breakpoints:
+                if c_lo <= c <= c_hi:
+                    aqi = ((aqi_hi - aqi_lo) / (c_hi - c_lo)) * (c - c_lo) + aqi_lo
+                    return round(aqi, 0)
+            # Above highest breakpoint — cap at 500
+            if c > breakpoints[-1][1]:
+                return 500.0
             return None
 
-        # Simple linear scaling as a fallback aqi estimate
-        aqi_from_pm25 = (pm25 / 35.4) * 100 if pd.notna(pm25) else 0
-        aqi_from_pm10 = (pm10 / 150) * 100 if pd.notna(pm10) else 0
+        aqis = []
+        if pd.notna(pm25):
+            a = _linear_interpolate(float(pm25), PM25_BREAKPOINTS)
+            if a is not None:
+                aqis.append(a)
 
-        return round(max(aqi_from_pm25, aqi_from_pm10), 1)
+        if pd.notna(pm10):
+            a = _linear_interpolate(float(pm10), PM10_BREAKPOINTS)
+            if a is not None:
+                aqis.append(a)
+
+        return max(aqis) if aqis else None
+

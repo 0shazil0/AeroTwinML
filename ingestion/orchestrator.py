@@ -284,11 +284,14 @@ class IngestionOrchestrator:
     def fetch_all_for_location(self, loc: dict) -> pd.DataFrame:
         """Fetch + merge data for a single location dict from settings.yaml.
 
+        RESILIENT: AQICN/OpenAQ failures only produce warnings — they never block
+        the city. Only Open-Meteo failure (no weather features) causes city skip.
+
         Args:
             loc: dict with keys: name, latitude, longitude, openaq_location_id, aqicn_station
 
         Returns:
-            Merged DataFrame tagged with 'city' column.
+            Merged DataFrame tagged with 'city' column. Empty only if Open-Meteo failed.
         """
         city = loc.get("name", "Unknown")
         logger.info("=== Fetching data for %s ===", city)
@@ -302,50 +305,58 @@ class IngestionOrchestrator:
             location_id=loc.get("openaq_location_id"),
             city_name=city,
         )
+        aqicn_station = loc.get("aqicn_station") or ""
         aqicn = AQICNProvider(
-            station=str(loc.get("aqicn_station") or ""),
+            station=str(aqicn_station),
             city_name=city,
         )
 
-        # Fetch
+        # Open-Meteo: weather features — CRITICAL, skip city if unavailable
         try:
             om_df = om.run()
             logger.info("  %s Open-Meteo: %d rows", city, len(om_df))
         except Exception as e:
-            logger.warning("  %s Open-Meteo failed: %s", city, e)
-            om_df = pd.DataFrame()
+            logger.warning("  %s Open-Meteo failed: %s — skipping city", city, e)
+            return pd.DataFrame()
 
+        if om_df.empty:
+            logger.warning("  %s: Open-Meteo returned empty — skipping city", city)
+            return pd.DataFrame()
+
+        # OpenAQ: observed PM2.5/PM10 labels — best-effort, not blocking
+        oaq_df = pd.DataFrame()
         try:
             oaq_df = oaq.run()
             logger.info("  %s OpenAQ: %d rows", city, len(oaq_df))
         except Exception as e:
-            logger.warning("  %s OpenAQ failed: %s", city, e)
-            oaq_df = pd.DataFrame()
+            logger.warning("  %s OpenAQ failed (non-blocking): %s", city, e)
 
-        try:
-            aq_df = aqicn.run()
-            logger.info("  %s AQICN: %d rows", city, len(aq_df))
-        except Exception as e:
-            logger.warning("  %s AQICN failed: %s", city, e)
-            aq_df = pd.DataFrame()
+        # AQICN: live AQI labels — best-effort, skip if no station configured
+        aq_df = pd.DataFrame()
+        if aqicn_station and aqicn_station not in ("null", "None", ""):
+            try:
+                aq_df = aqicn.run()
+                logger.info("  %s AQICN: %d rows", city, len(aq_df))
+            except Exception as e:
+                logger.warning("  %s AQICN failed (non-blocking): %s", city, e)
+        else:
+            logger.info("  %s: No AQICN station configured", city)
 
-        # Merge
-        observed_dfs = []
-        for source_df in [oaq_df, aq_df]:
-            if not source_df.empty:
-                observed_dfs.append(source_df)
-
-        if om_df.empty:
-            logger.warning("  %s: No data available", city)
-            return pd.DataFrame()
-
+        # Merge: weather is base, observed sources are optional
+        observed_dfs = [df for df in [oaq_df, aq_df] if not df.empty]
         merged = self.merge(om_df, observed_dfs)
         if not merged.empty:
             merged["city"] = city
+        logger.info("  %s: merged %d rows, %d with observed AQI",
+                     city, len(merged),
+                     merged["aqi"].notna().sum() if "aqi" in merged.columns else 0)
         return merged
 
     def fetch_all_multi(self) -> pd.DataFrame:
         """Fetch data from all configured locations and combine.
+
+        Partial success is fine: if 1 of 2 cities succeeds, returns that city's data.
+        Only returns empty DataFrame if ALL cities failed.
 
         Returns:
             Combined DataFrame with 'city' column identifying each row's city.
@@ -355,13 +366,26 @@ class IngestionOrchestrator:
             return self.run_full_cycle()
 
         all_dfs = []
+        failed_cities = []
         for loc in self.locations:
-            df = self.fetch_all_for_location(loc)
-            if not df.empty:
-                all_dfs.append(df)
+            city = loc.get("name", "Unknown")
+            try:
+                df = self.fetch_all_for_location(loc)
+                if not df.empty:
+                    all_dfs.append(df)
+                    logger.info("  ✓ %s: %d rows collected", city, len(df))
+                else:
+                    failed_cities.append(city)
+                    logger.warning("  ✗ %s: returned empty (will be skipped)", city)
+            except Exception as e:
+                failed_cities.append(city)
+                logger.error("  ✗ %s: unexpected error (non-blocking): %s", city, e)
+
+        if failed_cities:
+            logger.warning("Cities with no data: %s", failed_cities)
 
         if not all_dfs:
-            logger.warning("No data from any location")
+            logger.warning("No data from any location — all cities failed")
             return pd.DataFrame()
 
         combined = pd.concat(all_dfs, ignore_index=True)

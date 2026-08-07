@@ -26,8 +26,25 @@ class InferenceEngine:
         self._load_models()
 
     def _load_models(self):
-        """Load per-horizon models, falling back to single model."""
+        """Load per-horizon models, falling back to single model.
+
+        Loading order:
+        1. Per-horizon pkl files (24h, 48h, 72h) — best differentiated forecasts
+        2. Single aqi_forecaster_latest.pkl — works for all horizons
+        3. No model — uses Open-Meteo AQI fallback (shows 'fallback_om_forecast')
+        """
         from models.registry import get_models_by_horizon, get_latest_model
+        from pathlib import Path
+
+        MODEL_DIR = Path(__file__).resolve().parent / "artifacts"
+        logger.info("Model artifacts directory: %s (exists=%s)", MODEL_DIR, MODEL_DIR.exists())
+
+        # Log what files are present
+        if MODEL_DIR.exists():
+            pkl_files = list(MODEL_DIR.glob("*.pkl"))
+            logger.info("Available pkl files: %s", [f.name for f in pkl_files])
+        else:
+            logger.warning("Model artifacts directory does not exist — no trained models available")
 
         # Try per-horizon models first
         horizon_models = get_models_by_horizon()
@@ -35,10 +52,17 @@ class InferenceEngine:
             self.models_by_horizon = horizon_models
             logger.info("Loaded per-horizon models: %s", list(horizon_models.keys()))
         else:
+            logger.info("Per-horizon models not found — trying single model")
             # Fallback: single model for all horizons
             self.model = get_latest_model()
             if self.model:
                 logger.info("Loaded single model: %s", type(self.model).__name__)
+            else:
+                logger.warning(
+                    "No trained model found in artifacts/. "
+                    "Run 'python -m pipelines.daily_pipeline' to train and save models. "
+                    "Falling back to Open-Meteo forecast AQI."
+                )
 
     def predict(
         self,

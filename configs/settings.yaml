@@ -23,7 +23,7 @@ locations:
     longitude: 67.082
     timezone: Asia/Karachi
     openaq_location_id: 4791924
-    aqicn_station: null
+    aqicn_station: "@544681"
 
 providers:
   open_meteo:

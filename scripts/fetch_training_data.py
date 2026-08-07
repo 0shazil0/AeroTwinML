@@ -68,12 +68,24 @@ def load_locations() -> list:
     }]
 
 
-def fetch_openmeteo(start: str, end: str) -> Optional[pd.DataFrame]:
-    """Fetch historical weather from Open-Meteo Archive API."""
-    print(f"\n[Open-Meteo] Fetching weather: {start} -> {end}")
+def fetch_openmeteo(start: str, end: str, lat: float = None, lon: float = None, tz: str = None) -> Optional[pd.DataFrame]:
+    """Fetch historical weather from Open-Meteo Archive API.
+
+    Args:
+        start: Start date YYYY-MM-DD
+        end: End date YYYY-MM-DD
+        lat: Latitude (defaults to module-level LAT — Hyderabad fallback)
+        lon: Longitude (defaults to module-level LON)
+        tz: Timezone string (defaults to module-level TZ)
+    """
+    # Use per-location values if provided; fall back to module-level defaults
+    _lat = lat if lat is not None else LAT
+    _lon = lon if lon is not None else LON
+    _tz = tz or TZ
+    print(f"\n[Open-Meteo] Fetching weather: {start} -> {end} (lat={_lat}, lon={_lon})")
     params = {
-        "latitude": LAT,
-        "longitude": LON,
+        "latitude": _lat,
+        "longitude": _lon,
         "start_date": start,
         "end_date": end,
         "hourly": (
@@ -81,7 +93,7 @@ def fetch_openmeteo(start: str, end: str) -> Optional[pd.DataFrame]:
             "pressure_msl,wind_speed_10m,wind_direction_10m,"
             "precipitation,cloud_cover"
         ),
-        "timezone": TZ,
+        "timezone": _tz,
     }
     try:
         resp = requests.get(OPENMETEO_ARCHIVE, params=params, timeout=120)
@@ -98,12 +110,13 @@ def fetch_openmeteo(start: str, end: str) -> Optional[pd.DataFrame]:
             if key != "time":
                 df[key] = values
 
-        df["timestamp"] = df["timestamp"].dt.tz_localize(TZ)
+        df["timestamp"] = df["timestamp"].dt.tz_localize(_tz)
         print(f"   OK: {len(df)} hourly rows, {len(df.columns)-1} weather variables")
         return df
     except Exception as e:
         print(f"   FAILED: {e}")
         return None
+
 
 
 def discover_openaq_sensors(location_id: int) -> dict:
@@ -438,7 +451,7 @@ Examples:
         aqicn_df = None
 
         if args.provider in ("all", "openmeteo"):
-            weather_df = fetch_openmeteo(start_date, end_date)
+            weather_df = fetch_openmeteo(start_date, end_date, lat=lat, lon=lon, tz=tz)
 
         if args.provider in ("all", "openaq"):
             openaq_df = fetch_openaq_all(start_date, end_date)

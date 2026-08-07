@@ -184,6 +184,48 @@ def run_daily_pipeline() -> dict:
             },
         }
 
+        # Write full metrics table to disk so dashboard can display it
+        metrics_summary = {
+            "trained_at": format_iso(now_local()),
+            "n_train_rows": split_idx,
+            "n_test_rows": len(train_df) - split_idx,
+            "n_features": len(feature_cols),
+            "best_model": best_mname,
+            "best_horizon": best_horizon,
+            "per_horizon_best": {
+                h: {
+                    "model_name": e["model_name"],
+                    "rmse": round(e.get("rmse", 0), 3),
+                    "mae": round(e["metrics"].get(f"mae_{h}", 0), 3) if "metrics" in e else None,
+                    "r2": round(e["metrics"].get(f"r2_{h}", 0), 3) if "metrics" in e else None,
+                }
+                for h, e in best_per_horizon.items()
+            },
+            "all_models": {
+                f"{h}_{mname}": {
+                    "horizon": h,
+                    "model_name": mname,
+                    "metrics": result.get("metrics", {}),
+                }
+                for h, horizon_results in results.items()
+                for mname, result in horizon_results.items()
+                if mname not in ("persistence", "seasonal_naive")  # Exclude trivial baselines
+            },
+        }
+        save_json(metrics_summary, DATA_DIR / "processed" / "training_metrics.json")
+
+        # Print a clear metrics table to GitHub Actions logs
+        logger.info("\n" + "=" * 60)
+        logger.info("MODEL PERFORMANCE SUMMARY")
+        logger.info("=" * 60)
+        for h, entry in best_per_horizon.items():
+            rmse = round(entry.get("rmse", 0), 2)
+            mae = round(entry["metrics"].get(f"mae_{h}", 0), 2) if "metrics" in entry else "?"
+            r2 = round(entry["metrics"].get(f"r2_{h}", 0), 3) if "metrics" in entry else "?"
+            logger.info("  Horizon %s | Best: %-20s | RMSE: %6.2f | MAE: %6.2f | R2: %5.3f",
+                         h, entry["model_name"], rmse, mae if isinstance(mae, float) else 0, r2 if isinstance(r2, float) else 0)
+        logger.info("=" * 60 + "\n")
+
         # Step 4: Register to Hopsworks Model Registry (or MLflow fallback)
         logger.info("=== Step 4: Model Registry ===")
         try:

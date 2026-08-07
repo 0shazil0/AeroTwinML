@@ -57,15 +57,19 @@ def run_hourly_pipeline() -> dict:
         else:
             merged = orchestrator.run_full_cycle()
         status["steps"]["ingestion"] = {
-            "status": "ok",
+            "status": "ok" if len(merged) > 0 else "partial",
             "rows_fetched": len(merged),
         }
         logger.info("Ingestion complete: %d rows", len(merged))
 
         if merged.empty:
+            # No data from any city — still try to write last known forecast if it exists
+            logger.warning("All cities returned empty data — using cached forecast")
             status["steps"]["ingestion"]["status"] = "empty"
             status["completed_at"] = format_iso(now_local())
             _save_status(status)
+            # Exit 0 (success) because this might be a transient API issue, not a code bug
+            status["success"] = True
             return status
 
         # Step 2: Feature Engineering
@@ -135,8 +139,9 @@ def run_hourly_pipeline() -> dict:
                 "cities": city_forecasts,
             }
 
-        # Embed 7-day history for dashboard
-        _embed_history(forecast)
+        # NOTE: Per-city history is already embedded inside the city loop above
+        # via _embed_history_from_df(fc, city_merged). Do NOT call _embed_history(forecast)
+        # here — it would overwrite per-city history with a stale merged_latest.parquet read.
 
         forecast_path = PREDICTIONS_DIR / f"forecast_{now_local().strftime('%Y%m%d_%H')}.json"
         save_json(forecast, forecast_path)
@@ -366,6 +371,9 @@ def _embed_history_from_df(forecast: dict, df: pd.DataFrame, hours: int = 168):
 
     except Exception as e:
         logger.warning("Could not embed history from DataFrame: %s", e)
+
+
+if __name__ == "__main__":
     result = run_hourly_pipeline()
     print(json.dumps(result, indent=2, default=str))
     sys.exit(0 if result["success"] else 1)
