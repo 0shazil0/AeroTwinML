@@ -1,23 +1,23 @@
 {
   "forecast": {
     "24h": {
-      "aqi": 73.0,
+      "aqi": 80.0,
       "category": "Moderate",
       "alert": false
     },
     "48h": {
-      "aqi": 73.0,
+      "aqi": 80.0,
       "category": "Moderate",
       "alert": false
     },
     "72h": {
-      "aqi": 73.0,
+      "aqi": 80.0,
       "category": "Moderate",
       "alert": false
     }
   },
-  "timestamp": "2026-08-08T08:25:35.855403",
-  "current_aqi": 73.0,
+  "timestamp": "2026-08-08T09:25:16.852355",
+  "current_aqi": 80.0,
   "model_info": {
     "type": "per_horizon",
     "features_used": 57,
@@ -199,9 +199,9 @@
     },
     {
       "timestamp": "2026-08-08T08:00:00+00:00",
-      "aqi": 73.0,
-      "pm2_5": 73.0,
-      "pm10": 21.0,
+      "aqi": null,
+      "pm2_5": null,
+      "pm10": null,
       "no2": null,
       "o3": null,
       "so2": null,
@@ -214,13 +214,13 @@
       "precipitation": 0.0,
       "cloud_cover": 27.0,
       "om_forecast_aqi": 80.0,
-      "dominant_pollutant": "pm25"
+      "dominant_pollutant": null
     },
     {
       "timestamp": "2026-08-08T09:00:00+00:00",
-      "aqi": null,
-      "pm2_5": null,
-      "pm10": null,
+      "aqi": 80.0,
+      "pm2_5": 80.0,
+      "pm10": 25.0,
       "no2": null,
       "o3": null,
       "so2": null,
@@ -233,7 +233,7 @@
       "precipitation": 0.0,
       "cloud_cover": 5.0,
       "om_forecast_aqi": 80.0,
-      "dominant_pollutant": null
+      "dominant_pollutant": "pm25"
     },
     {
       "timestamp": "2026-08-08T10:00:00+00:00",
@@ -1875,23 +1875,23 @@
     "Hyderabad": {
       "forecast": {
         "24h": {
-          "aqi": 73.0,
+          "aqi": 80.0,
           "category": "Moderate",
           "alert": false
         },
         "48h": {
-          "aqi": 73.0,
+          "aqi": 80.0,
           "category": "Moderate",
           "alert": false
         },
         "72h": {
-          "aqi": 73.0,
+          "aqi": 80.0,
           "category": "Moderate",
           "alert": false
         }
       },
-      "timestamp": "2026-08-08T08:25:35.855403",
-      "current_aqi": 73.0,
+      "timestamp": "2026-08-08T09:25:16.852355",
+      "current_aqi": 80.0,
       "model_info": {
         "type": "per_horizon",
         "features_used": 57,
@@ -2073,9 +2073,9 @@
         },
         {
           "timestamp": "2026-08-08T08:00:00+00:00",
-          "aqi": 73.0,
-          "pm2_5": 73.0,
-          "pm10": 21.0,
+          "aqi": null,
+          "pm2_5": null,
+          "pm10": null,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -2088,13 +2088,13 @@
           "precipitation": 0.0,
           "cloud_cover": 27.0,
           "om_forecast_aqi": 80.0,
-          "dominant_pollutant": "pm25"
+          "dominant_pollutant": null
         },
         {
           "timestamp": "2026-08-08T09:00:00+00:00",
-          "aqi": null,
-          "pm2_5": null,
-          "pm10": null,
+          "aqi": 80.0,
+          "pm2_5": 80.0,
+          "pm10": 25.0,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -2107,7 +2107,7 @@
           "precipitation": 0.0,
           "cloud_cover": 5.0,
           "om_forecast_aqi": 80.0,
-          "dominant_pollutant": null
+          "dominant_pollutant": "pm25"
         },
         {
           "timestamp": "2026-08-08T10:00:00+00:00",
@@ -3764,7 +3764,7 @@
           "alert": false
         }
       },
-      "timestamp": "2026-08-08T08:25:35.872309",
+      "timestamp": "2026-08-08T09:25:16.873582",
       "current_aqi": 74.0,
       "model_info": {
         "type": "per_horizon",
@@ -3962,7 +3962,7 @@
           "precipitation": 0.0,
           "cloud_cover": 72.0,
           "om_forecast_aqi": 75.0,
-          "dominant_pollutant": ""
+          "dominant_pollutant": null
         },
         {
           "timestamp": "2026-08-08T09:00:00+00:00",
@@ -3981,7 +3981,7 @@
           "precipitation": 0.0,
           "cloud_cover": 60.0,
           "om_forecast_aqi": 75.0,
-          "dominant_pollutant": null
+          "dominant_pollutant": ""
         },
         {
           "timestamp": "2026-08-08T10:00:00+00:00",
