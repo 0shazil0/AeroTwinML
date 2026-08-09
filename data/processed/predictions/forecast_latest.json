@@ -1,26 +1,29 @@
 {
-  "current_aqi": 59.0,
   "forecast": {
     "24h": {
-      "aqi": 81.0,
+      "aqi": 73.0,
       "category": "Moderate",
       "alert": false
     },
     "48h": {
-      "aqi": 75.0,
+      "aqi": 73.0,
       "category": "Moderate",
       "alert": false
     },
     "72h": {
-      "aqi": 76.0,
+      "aqi": 73.0,
       "category": "Moderate",
       "alert": false
     }
   },
-  "timestamp": "2026-08-09T16:46:59.899151",
+  "timestamp": "2026-08-09T11:18:47.029834",
+  "current_aqi": 73.0,
   "model_info": {
-    "type": "fallback_om_forecast",
-    "features_used": 0
+    "type": "per_horizon",
+    "features_used": 57,
+    "horizon_models": {
+      "48h": "ridge"
+    }
   },
   "weather": {
     "temperature": 28.4,
@@ -252,9 +255,9 @@
     },
     {
       "timestamp": "2026-08-09T11:00:00+00:00",
-      "aqi": 59.0,
-      "pm2_5": 59.0,
-      "pm10": 15.0,
+      "aqi": 73.0,
+      "pm2_5": 73.0,
+      "pm10": 21.0,
       "no2": null,
       "o3": null,
       "so2": null,
@@ -1869,28 +1872,31 @@
   "city": "Hyderabad",
   "cities": {
     "Hyderabad": {
-      "current_aqi": 59.0,
       "forecast": {
         "24h": {
-          "aqi": 81.0,
+          "aqi": 73.0,
           "category": "Moderate",
           "alert": false
         },
         "48h": {
-          "aqi": 75.0,
+          "aqi": 73.0,
           "category": "Moderate",
           "alert": false
         },
         "72h": {
-          "aqi": 76.0,
+          "aqi": 73.0,
           "category": "Moderate",
           "alert": false
         }
       },
-      "timestamp": "2026-08-09T16:46:59.899151",
+      "timestamp": "2026-08-09T11:18:47.029834",
+      "current_aqi": 73.0,
       "model_info": {
-        "type": "fallback_om_forecast",
-        "features_used": 0
+        "type": "per_horizon",
+        "features_used": 57,
+        "horizon_models": {
+          "48h": "ridge"
+        }
       },
       "weather": {
         "temperature": 28.4,
@@ -2122,9 +2128,9 @@
         },
         {
           "timestamp": "2026-08-09T11:00:00+00:00",
-          "aqi": 59.0,
-          "pm2_5": 59.0,
-          "pm10": 15.0,
+          "aqi": 73.0,
+          "pm2_5": 73.0,
+          "pm10": 21.0,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -3739,28 +3745,31 @@
       "city": "Hyderabad"
     },
     "Karachi": {
-      "current_aqi": 74.0,
       "forecast": {
         "24h": {
-          "aqi": 72.0,
+          "aqi": 74.0,
           "category": "Moderate",
           "alert": false
         },
         "48h": {
-          "aqi": 71.0,
+          "aqi": 74.0,
           "category": "Moderate",
           "alert": false
         },
         "72h": {
-          "aqi": 72.0,
+          "aqi": 74.0,
           "category": "Moderate",
           "alert": false
         }
       },
-      "timestamp": "2026-08-09T16:46:59.914073",
+      "timestamp": "2026-08-09T11:18:47.056742",
+      "current_aqi": 74.0,
       "model_info": {
-        "type": "fallback_om_forecast",
-        "features_used": 0
+        "type": "per_horizon",
+        "features_used": 57,
+        "horizon_models": {
+          "48h": "ridge"
+        }
       },
       "weather": {
         "temperature": 27.6,
