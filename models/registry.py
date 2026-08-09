@@ -164,11 +164,13 @@ def get_models_by_horizon() -> Dict[str, Dict[str, Any]]:
     return horizons
 
 
-def save_models_by_horizon(best_per_horizon: Dict[str, Dict[str, Any]]) -> None:
+def save_models_by_horizon(best_per_horizon: Dict[str, Dict[str, Any]], feature_cols: list = None) -> None:
     """Save per-horizon models to local pickle files.
 
     Args:
         best_per_horizon: {"24h": {"model_name": str, "model": BaseModel, ...}, ...}
+        feature_cols: The EXACT list of feature column names used for training.
+                      CRITICAL: saved alongside the model so inference uses identical features.
     """
     import joblib
 
@@ -180,10 +182,13 @@ def save_models_by_horizon(best_per_horizon: Dict[str, Dict[str, Any]]) -> None:
             "model": entry["model"],
             "metrics": entry.get("metrics", {}),
             "rmse": entry.get("rmse"),
+            # Persist exact feature list to prevent inference drift
+            "feature_cols": feature_cols or [],
         }
         joblib.dump(obj, path)
-        logger.info("Saved per-horizon model: %s (%s, rmse=%.3f) -> %s",
-                     horizon_key, entry["model_name"], entry.get("rmse", 0), path)
+        logger.info("Saved per-horizon model: %s (%s, rmse=%.3f, features=%d) -> %s",
+                     horizon_key, entry["model_name"], entry.get("rmse", 0),
+                     len(feature_cols or []), path)
 
 
 def register_model(model_name: str = "aqi_forecaster") -> Optional[str]:

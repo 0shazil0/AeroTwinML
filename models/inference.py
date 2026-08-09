@@ -50,6 +50,13 @@ class InferenceEngine:
         horizon_models = get_models_by_horizon()
         if horizon_models:
             self.models_by_horizon = horizon_models
+            # Use feature_cols from the first horizon model (all should be identical)
+            for h_entry in horizon_models.values():
+                saved_cols = h_entry.get("feature_cols", [])
+                if saved_cols:
+                    self.feature_cols = saved_cols
+                    logger.info("Loaded feature_cols from model pkl: %d features", len(saved_cols))
+                    break
             logger.info("Loaded per-horizon models: %s", list(horizon_models.keys()))
         else:
             logger.info("Per-horizon models not found — trying single model")
@@ -100,26 +107,44 @@ class InferenceEngine:
         else:
             result["current_aqi"] = 0.0
 
-        # Prepare feature vector
-        feature_cols = self.feature_cols or [c for c in features.columns if c not in (
-            "timestamp", "source", "station_name", "city", "country",
-            "dominant_pollutant", "merged_at", "fetched_at", "latitude", "longitude",
-        ) and not c.startswith("target_")]
-
-        if not feature_cols:
-            feature_cols = [c for c in features.columns if features[c].dtype in (np.float64, np.float32, np.int64, np.int32)]
-
-        X = features[feature_cols].fillna(0).values[-1:]
+        # Determine global feature columns (for single-model fallback)
+        # Priority: 1) saved feature_cols from pkl 2) dynamic selection
+        global_feature_cols = self.feature_cols or [
+            c for c in features.columns if c not in (
+                "timestamp", "source", "station_name", "city", "country",
+                "dominant_pollutant", "merged_at", "fetched_at", "latitude", "longitude",
+            ) and not c.startswith("target_")
+            and features[c].dtype in (np.float64, np.float32, np.int64, np.int32)
+        ]
 
         for h in horizons:
             horizon_key = f"{h}h"
-            # Use per-horizon model if available, else single model
-            model_for_h = self.models_by_horizon.get(horizon_key, {}).get("model") or self.model
+            h_entry = self.models_by_horizon.get(horizon_key, {})
+            model_for_h = h_entry.get("model") or self.model
+
             if model_for_h is None:
                 pred = result["current_aqi"]
             else:
                 try:
+                    # Use the feature_cols saved WITH this specific horizon's model
+                    # This is the fix for feature drift (57 vs 49 mismatch)
+                    horizon_feature_cols = h_entry.get("feature_cols") or global_feature_cols
+
+                    if horizon_feature_cols:
+                        # Build feature vector using ONLY the columns the model was trained on
+                        # Columns missing from live data are filled with 0 (safe default)
+                        available = [c for c in horizon_feature_cols if c in features.columns]
+                        missing = [c for c in horizon_feature_cols if c not in features.columns]
+                        if missing:
+                            logger.debug("Filling %d missing feature(s) with 0: %s", len(missing), missing[:5])
+
+                        X_df = features.reindex(columns=horizon_feature_cols, fill_value=0)
+                        X = X_df.fillna(0).values[-1:]
+                    else:
+                        X = features[global_feature_cols].fillna(0).values[-1:]
+
                     pred = float(model_for_h.predict(X)[0])
+                    pred = max(0.0, min(500.0, pred))  # Clamp to valid AQI range
                 except Exception as e:
                     logger.error("Prediction error for %s: %s", horizon_key, e)
                     pred = result["current_aqi"]
@@ -133,7 +158,7 @@ class InferenceEngine:
         model_names = {k: v.get("model_name", "?") for k, v in self.models_by_horizon.items()}
         result["model_info"] = {
             "type": "per_horizon" if self.models_by_horizon else (type(self.model).__name__ if self.model else "none"),
-            "features_used": len(feature_cols),
+            "features_used": len(self.feature_cols) if self.feature_cols else len(global_feature_cols),
             "horizon_models": model_names if model_names else None,
         }
 

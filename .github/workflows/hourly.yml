@@ -24,7 +24,7 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil flask jinja2 plotly
+        run: pip install pandas numpy scikit-learn pyarrow requests pyyaml python-dotenv pytz python-dateutil flask jinja2 plotly lightgbm xgboost joblib
 
       - name: Run hourly pipeline
         env:

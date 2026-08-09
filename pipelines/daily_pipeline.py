@@ -252,7 +252,7 @@ def run_daily_pipeline() -> dict:
 
             # Save per-horizon models for differentiated forecasts
             if best_per_horizon:
-                save_models_by_horizon(best_per_horizon)
+                save_models_by_horizon(best_per_horizon, feature_cols=feature_cols)
                 logger.info("Saved per-horizon models: %s",
                             {h: e["model_name"] for h, e in best_per_horizon.items()})
 

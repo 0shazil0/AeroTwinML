@@ -143,6 +143,24 @@ def run_hourly_pipeline() -> dict:
         # via _embed_history_from_df(fc, city_merged). Do NOT call _embed_history(forecast)
         # here — it would overwrite per-city history with a stale merged_latest.parquet read.
 
+        # Guard: Check if all cities are using fallback (no trained model).
+        # If so, preserve the TRAINED FORECASTS from forecast_latest.json and only
+        # update the live weather, current_aqi, and history (don't overwrite 24h/48h/72h predictions).
+        all_fallback = all(
+            fc.get("model_info", {}).get("type") in ("fallback_om_forecast", "fallback_persistence", None)
+            for fc in city_forecasts.values()
+        )
+
+        if all_fallback:
+            # Try to load existing forecast and carry forward trained model predictions
+            existing_forecast = _load_existing_forecast()
+            if existing_forecast:
+                logger.info("All cities using fallback — carrying forward trained model forecasts from previous run")
+                forecast = _merge_live_into_existing(forecast, existing_forecast, city_forecasts)
+                status["steps"]["inference"]["note"] = "carried_forward_trained_forecasts"
+            else:
+                logger.warning("No existing forecast to carry forward — writing fallback forecast")
+
         forecast_path = PREDICTIONS_DIR / f"forecast_{now_local().strftime('%Y%m%d_%H')}.json"
         save_json(forecast, forecast_path)
         save_json(forecast, PREDICTIONS_DIR / "forecast_latest.json")
@@ -151,7 +169,9 @@ def run_hourly_pipeline() -> dict:
             "status": "ok",
             "current_aqi": forecast.get("current_aqi", 0),
             "forecast_24h": forecast.get("forecast", {}).get("24h", {}).get("aqi"),
+            "model_type": forecast.get("model_info", {}).get("type", "unknown"),
         }
+
 
         # Step 4: Alerts
         logger.info("=== Step 4: Alerts Check ===")
@@ -230,6 +250,83 @@ def _quality_check(df) -> dict:
 def _save_status(status: dict):
     STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
     save_json(status, STATUS_FILE)
+
+
+def _load_existing_forecast() -> dict:
+    """Load the current forecast_latest.json if it exists and is recent (< 26h old)."""
+    import json
+    forecast_path = PREDICTIONS_DIR / "forecast_latest.json"
+    if not forecast_path.exists():
+        return {}
+    try:
+        with open(forecast_path) as f:
+            existing = json.load(f)
+        # Check if it contains real trained model predictions (not all fallback)
+        ts_str = existing.get("timestamp")
+        if ts_str:
+            age_hours = (pd.Timestamp.now() - pd.Timestamp(ts_str)).total_seconds() / 3600
+            if age_hours > 26:
+                logger.info("Existing forecast is %.1fh old — too stale to carry forward", age_hours)
+                return {}
+        model_type = existing.get("model_info", {}).get("type", "")
+        if "fallback" in model_type:
+            return {}  # Don't carry forward another fallback
+        return existing
+    except Exception as e:
+        logger.warning("Could not load existing forecast: %s", e)
+        return {}
+
+
+def _merge_live_into_existing(new_forecast: dict, existing: dict, city_forecasts: dict) -> dict:
+    """Merge live current_aqi, weather, and history into the existing trained forecast.
+
+    Keeps the trained model's 24h/48h/72h predictions but updates:
+    - current_aqi (fresh from Open-Meteo)
+    - weather dict (live readings)
+    - history array (recent hours)
+    - per-city current_aqi and history
+
+    This ensures the dashboard always shows real-time weather/AQI while
+    keeping trained forecasts until the next daily retrain.
+    """
+    merged = existing.copy()
+    # Update top-level current_aqi and weather
+    merged["current_aqi"] = new_forecast.get("current_aqi", existing.get("current_aqi"))
+    if new_forecast.get("weather"):
+        merged["weather"] = new_forecast["weather"]
+    if new_forecast.get("pollutants"):
+        merged["pollutants"] = new_forecast["pollutants"]
+    if new_forecast.get("history"):
+        merged["history"] = new_forecast["history"]
+
+    # Update per-city current_aqi and history while preserving trained forecasts
+    existing_cities = existing.get("cities", {})
+    new_cities = new_forecast.get("cities", city_forecasts)
+    if existing_cities and new_cities:
+        updated_cities = dict(existing_cities)
+        for city_name, live_data in new_cities.items():
+            if city_name in updated_cities:
+                updated_cities[city_name]["current_aqi"] = live_data.get("current_aqi",
+                    updated_cities[city_name].get("current_aqi"))
+                if live_data.get("weather"):
+                    updated_cities[city_name]["weather"] = live_data["weather"]
+                if live_data.get("pollutants"):
+                    updated_cities[city_name]["pollutants"] = live_data["pollutants"]
+                if live_data.get("history"):
+                    updated_cities[city_name]["history"] = live_data["history"]
+                # Keep existing trained forecast (24h/48h/72h)
+                logger.info("  Updated %s: current_aqi=%.1f (forecast preserved from daily training)",
+                             city_name, live_data.get("current_aqi", 0))
+            else:
+                # New city not in existing — add it with fallback forecast
+                updated_cities[city_name] = live_data
+        merged["cities"] = updated_cities
+        # Re-sync top-level to first city
+        first_city = list(updated_cities.values())[0]
+        merged["current_aqi"] = first_city.get("current_aqi", merged["current_aqi"])
+
+    merged["_hourly_updated_at"] = format_iso(now_local())
+    return merged
 
 
 def _to_json_safe(v):
