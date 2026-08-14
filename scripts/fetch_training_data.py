@@ -68,8 +68,49 @@ def load_locations() -> list:
     }]
 
 
+def _fetch_openmeteo_chunk(start: str, end: str, lat: float, lon: float, tz: str, retries: int = 3) -> Optional[pd.DataFrame]:
+    """Fetch a single chunk of historical weather with automatic retries."""
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start,
+        "end_date": end,
+        "hourly": (
+            "temperature_2m,relative_humidity_2m,dew_point_2m,"
+            "pressure_msl,wind_speed_10m,wind_direction_10m,"
+            "precipitation,cloud_cover"
+        ),
+        "timezone": tz,
+    }
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.get(OPENMETEO_ARCHIVE, params=params, timeout=60)
+            resp.raise_for_status()
+            data = resp.json()
+            hourly = data.get("hourly", {})
+            times = hourly.get("time", [])
+            if not times:
+                return None
+
+            df = pd.DataFrame({"timestamp": pd.to_datetime(times)})
+            for key, values in hourly.items():
+                if key != "time":
+                    df[key] = values
+
+            df["timestamp"] = df["timestamp"].dt.tz_localize(tz)
+            return df
+        except Exception as e:
+            if attempt < retries:
+                wait_s = attempt * 3
+                print(f"   [Open-Meteo] Warning: chunk {start}->{end} attempt {attempt} failed ({e}). Retrying in {wait_s}s...")
+                time.sleep(wait_s)
+            else:
+                print(f"   [Open-Meteo] ERROR: chunk {start}->{end} failed after {retries} attempts: {e}")
+                return None
+
+
 def fetch_openmeteo(start: str, end: str, lat: float = None, lon: float = None, tz: str = None) -> Optional[pd.DataFrame]:
-    """Fetch historical weather from Open-Meteo Archive API.
+    """Fetch historical weather from Open-Meteo Archive API in manageable chunks.
 
     Args:
         start: Start date YYYY-MM-DD
@@ -78,44 +119,38 @@ def fetch_openmeteo(start: str, end: str, lat: float = None, lon: float = None, 
         lon: Longitude (defaults to module-level LON)
         tz: Timezone string (defaults to module-level TZ)
     """
-    # Use per-location values if provided; fall back to module-level defaults
     _lat = lat if lat is not None else LAT
     _lon = lon if lon is not None else LON
     _tz = tz or TZ
     print(f"\n[Open-Meteo] Fetching weather: {start} -> {end} (lat={_lat}, lon={_lon})")
-    params = {
-        "latitude": _lat,
-        "longitude": _lon,
-        "start_date": start,
-        "end_date": end,
-        "hourly": (
-            "temperature_2m,relative_humidity_2m,dew_point_2m,"
-            "pressure_msl,wind_speed_10m,wind_direction_10m,"
-            "precipitation,cloud_cover"
-        ),
-        "timezone": _tz,
-    }
-    try:
-        resp = requests.get(OPENMETEO_ARCHIVE, params=params, timeout=120)
-        resp.raise_for_status()
-        data = resp.json()
-        hourly = data.get("hourly", {})
-        times = hourly.get("time", [])
-        if not times:
-            print("   No hourly data in response")
-            return None
 
-        df = pd.DataFrame({"timestamp": pd.to_datetime(times)})
-        for key, values in hourly.items():
-            if key != "time":
-                df[key] = values
+    start_dt = datetime.strptime(start, "%Y-%m-%d")
+    end_dt = datetime.strptime(end, "%Y-%m-%d")
 
-        df["timestamp"] = df["timestamp"].dt.tz_localize(_tz)
-        print(f"   OK: {len(df)} hourly rows, {len(df.columns)-1} weather variables")
-        return df
-    except Exception as e:
-        print(f"   FAILED: {e}")
+    # Chunk by 180 days to avoid API timeouts
+    chunk_dfs = []
+    curr = start_dt
+    chunk_days = 180
+
+    while curr <= end_dt:
+        chunk_end_dt = min(curr + timedelta(days=chunk_days - 1), end_dt)
+        c_start = curr.strftime("%Y-%m-%d")
+        c_end = chunk_end_dt.strftime("%Y-%m-%d")
+
+        cdf = _fetch_openmeteo_chunk(c_start, c_end, _lat, _lon, _tz)
+        if cdf is not None and not cdf.empty:
+            chunk_dfs.append(cdf)
+        time.sleep(0.3)
+        curr = chunk_end_dt + timedelta(days=1)
+
+    if not chunk_dfs:
+        print("   FAILED: Could not fetch weather data from Open-Meteo")
         return None
+
+    full_df = pd.concat(chunk_dfs, ignore_index=True)
+    full_df = full_df.drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
+    print(f"   OK: {len(full_df)} hourly rows, {len(full_df.columns)-1} weather variables")
+    return full_df
 
 
 

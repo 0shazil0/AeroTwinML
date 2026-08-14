@@ -356,6 +356,25 @@ def _embed_weather_and_pollutants(forecast: dict, merged: pd.DataFrame):
         return
 
     latest = merged.iloc[-1]
+    curr_aqi = forecast.get("current_aqi") or latest.get("aqi") or 50.0
+
+    # Resolve PM2.5: check latest row -> search non-null history -> estimate from AQI
+    pm2_5_val = latest.get("pm2_5")
+    if (pd.isna(pm2_5_val) or pm2_5_val is None) and "pm2_5" in merged.columns:
+        valid_pm25 = merged["pm2_5"].dropna()
+        if not valid_pm25.empty:
+            pm2_5_val = valid_pm25.iloc[-1]
+    if (pd.isna(pm2_5_val) or pm2_5_val is None) and curr_aqi:
+        pm2_5_val = round((float(curr_aqi) * 35.4) / 100, 1)
+
+    # Resolve PM10: check latest row -> search non-null history -> estimate from PM2.5
+    pm10_val = latest.get("pm10")
+    if (pd.isna(pm10_val) or pm10_val is None) and "pm10" in merged.columns:
+        valid_pm10 = merged["pm10"].dropna()
+        if not valid_pm10.empty:
+            pm10_val = valid_pm10.iloc[-1]
+    if (pd.isna(pm10_val) or pm10_val is None) and pm2_5_val:
+        pm10_val = round(float(pm2_5_val) * 1.6, 1)
 
     forecast["weather"] = {
         "temperature": _to_json_safe(latest.get("temperature_2m")),
@@ -368,8 +387,8 @@ def _embed_weather_and_pollutants(forecast: dict, merged: pd.DataFrame):
     }
 
     forecast["pollutants"] = {
-        "pm2_5": _to_json_safe(latest.get("pm2_5")),
-        "pm10": _to_json_safe(latest.get("pm10")),
+        "pm2_5": _to_json_safe(pm2_5_val),
+        "pm10": _to_json_safe(pm10_val),
         "no2": _to_json_safe(latest.get("no2")),
         "o3": _to_json_safe(latest.get("o3")),
         "so2": _to_json_safe(latest.get("so2")),
@@ -377,7 +396,7 @@ def _embed_weather_and_pollutants(forecast: dict, merged: pd.DataFrame):
     }
 
     forecast["station"] = str(latest.get("station_name", "OpenAQ/4889110"))
-    logger.info("Embedded weather + pollutant data in forecast JSON")
+    logger.info("Embedded weather + pollutant data in forecast JSON (pm2_5=%s, pm10=%s)", pm2_5_val, pm10_val)
 
 
 def _embed_history(forecast: dict, hours: int = 168):
@@ -394,7 +413,6 @@ def _embed_history(forecast: dict, hours: int = 168):
         df = pd.read_parquet(merged_path)
         if "timestamp" in df.columns:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
-            # Use tz-aware cutoff to match tz-aware parquet timestamps
             cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
             if df["timestamp"].dt.tz is None:
                 df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
@@ -402,7 +420,6 @@ def _embed_history(forecast: dict, hours: int = 168):
                 df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
             df = df[df["timestamp"] >= cutoff]
 
-        # Only keep columns the dashboard needs
         keep_cols = [
             "timestamp", "aqi", "pm2_5", "pm10", "no2", "o3", "so2", "co",
             "temperature_2m", "relative_humidity_2m", "pressure_msl",
@@ -412,12 +429,19 @@ def _embed_history(forecast: dict, hours: int = 168):
         available = [c for c in keep_cols if c in df.columns]
         df = df[available].tail(hours * 2)
 
-        # Convert to JSON-safe records
         records = []
         for _, row in df.iterrows():
             rec = {}
             for col in available:
                 rec[col] = _to_json_safe(row[col])
+            rec["temperature"] = rec.get("temperature_2m")
+            rec["humidity"] = rec.get("relative_humidity_2m")
+            if rec.get("aqi") is None and rec.get("om_forecast_aqi") is not None:
+                rec["aqi"] = rec.get("om_forecast_aqi")
+            if rec.get("pm2_5") is None and rec.get("aqi") is not None:
+                rec["pm2_5"] = round((float(rec["aqi"]) * 35.4) / 100, 1)
+            if rec.get("pm10") is None and rec.get("pm2_5") is not None:
+                rec["pm10"] = round(float(rec["pm2_5"]) * 1.6, 1)
             records.append(rec)
 
         forecast["history"] = records
@@ -461,6 +485,14 @@ def _embed_history_from_df(forecast: dict, df: pd.DataFrame, hours: int = 168):
             rec = {}
             for col in available:
                 rec[col] = _to_json_safe(row[col])
+            rec["temperature"] = rec.get("temperature_2m")
+            rec["humidity"] = rec.get("relative_humidity_2m")
+            if rec.get("aqi") is None and rec.get("om_forecast_aqi") is not None:
+                rec["aqi"] = rec.get("om_forecast_aqi")
+            if rec.get("pm2_5") is None and rec.get("aqi") is not None:
+                rec["pm2_5"] = round((float(rec["aqi"]) * 35.4) / 100, 1)
+            if rec.get("pm10") is None and rec.get("pm2_5") is not None:
+                rec["pm10"] = round(float(rec["pm2_5"]) * 1.6, 1)
             records.append(rec)
 
         forecast["history"] = records

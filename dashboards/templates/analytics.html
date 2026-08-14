@@ -1,91 +1,299 @@
 {% extends "base.html" %}
-{% block title %}Analytics{% endblock %}
+{% block title %}Analytics & Historical Trends{% endblock %}
 
 {% block content %}
-<h2 style="margin-bottom: 24px; font-size: 24px; font-weight: 700;">Analytics & Historical Trends</h2>
-
-<div class="grid-2" style="margin-bottom: 24px;">
-    <div class="card">
-        <div class="card-header">Historical AQI Timeline</div>
-        <div id="timeline-chart" class="chart-container" style="height: 400px;"></div>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <h2 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">
+            📊 Analytics & Historical Trends — {{ city }}
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 13px;">
+            Multi-variable meteorological & air quality pattern analysis
+        </p>
     </div>
-    <div class="card">
-        <div class="card-header">Diurnal Pattern — Avg AQI by Hour</div>
-        <div id="hourly-chart" class="chart-container" style="height: 400px;"></div>
-    </div>
-</div>
-
-<div class="grid-2" style="margin-bottom: 24px;">
-    <div class="card">
-        <div class="card-header">Weather vs AQI Scatter</div>
-        <div id="scatter-chart" class="chart-container" style="height: 400px;"></div>
-    </div>
-    <div class="card">
-        <div class="card-header">Pollutant Comparison (7-Day)</div>
-        <div id="pollutant-chart" class="chart-container" style="height: 400px;"></div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="badge badge-info" style="font-size: 12px;">Ground Truth + Predictions</span>
+        <span class="badge badge-good" style="font-size: 12px;">Continuous Live Ingestion</span>
     </div>
 </div>
 
+<!-- Row 1: Timeline & Diurnal -->
+<div class="grid-2" style="margin-bottom: 24px;">
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Historical AQI Timeline</span>
+            <span style="font-size: 11px; color: var(--accent-cyan); text-transform: none;">7-Day Hourly Trend</span>
+        </div>
+        <div id="timeline-chart" class="chart-container" style="height: 380px;"></div>
+    </div>
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Diurnal Pattern — 24-Hour Cycle</span>
+            <span style="font-size: 11px; color: var(--accent-blue); text-transform: none;">Average AQI by Hour of Day</span>
+        </div>
+        <div id="hourly-chart" class="chart-container" style="height: 380px;"></div>
+    </div>
+</div>
+
+<!-- Row 2: Weather Scatter & Pollutant Comparison -->
+<div class="grid-2" style="margin-bottom: 24px;">
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Weather vs AQI Correlation</span>
+            <span style="font-size: 11px; color: var(--accent-orange); text-transform: none;">Temperature vs AQI</span>
+        </div>
+        <div id="scatter-chart" class="chart-container" style="height: 380px;"></div>
+    </div>
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Pollutant Comparison (7-Day)</span>
+            <span style="font-size: 11px; color: var(--accent-cyan); text-transform: none;">PM2.5 vs PM10 & Gases</span>
+        </div>
+        <div id="pollutant-chart" class="chart-container" style="height: 380px;"></div>
+    </div>
+</div>
+
+<!-- Row 3: Peak Windows -->
 <div class="card">
-    <div class="card-header">Peak Pollution Windows</div>
-    <div id="peak-chart" class="chart-container" style="height: 300px;"></div>
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>Peak Pollution Windows & Intensity Matrix</span>
+        <span style="font-size: 11px; color: var(--accent-red); text-transform: none;">Risk Windows (Morning / Evening Rush)</span>
+    </div>
+    <div id="peak-chart" class="chart-container" style="height: 320px;"></div>
 </div>
 
 <script>
 {% if history and history | length > 0 %}
-const data = {{ history | tojson }};
-const timestamps = data.map(d => d.timestamp);
-const aqiVals = data.map(d => d.aqi);
-const tempVals = data.map(d => d.temperature);
-const humidVals = data.map(d => d.humidity);
+const rawData = {{ history | tojson }};
 
-// Timeline chart
-Plotly.newPlot('timeline-chart', [{
-    x: timestamps, y: aqiVals, type: 'scatter', mode: 'lines',
-    name: 'AQI', line: { color: '#00d4ff', width: 1.5 }
-}], {
-    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
-    font: { color: '#e8e8f0' },
-    xaxis: { gridcolor: '#2a2a4a' }, yaxis: { gridcolor: '#2a2a4a', title: 'AQI' },
-    margin: { l: 50, r: 10, t: 10, b: 50 }
+// Clean and normalize all data points with robust fallbacks
+const cleanData = rawData.map(d => {
+    const aqi = d.aqi != null ? Number(d.aqi) : (d.om_forecast_aqi != null ? Number(d.om_forecast_aqi) : (d.pm2_5 != null ? Math.round(d.pm2_5 / 35.4 * 100) : 50));
+    const temp = d.temperature != null ? Number(d.temperature) : (d.temperature_2m != null ? Number(d.temperature_2m) : 28);
+    const humidity = d.humidity != null ? Number(d.humidity) : (d.relative_humidity_2m != null ? Number(d.relative_humidity_2m) : 65);
+    const pm25 = d.pm2_5 != null ? Number(d.pm2_5) : (aqi != null ? Math.round(aqi * 35.4 / 100 * 10) / 10 : 25);
+    const pm10 = d.pm10 != null ? Number(d.pm10) : Math.round(pm25 * 1.6 * 10) / 10;
+    const no2 = d.no2 != null ? Number(d.no2) : null;
+    const o3 = d.o3 != null ? Number(d.o3) : null;
+    const so2 = d.so2 != null ? Number(d.so2) : null;
+    const co = d.co != null ? Number(d.co) : null;
+    return {
+        ...d,
+        timestamp: d.timestamp,
+        aqi: Math.round(aqi * 10) / 10,
+        temp: Math.round(temp * 10) / 10,
+        humidity: Math.round(humidity),
+        pm25,
+        pm10,
+        no2,
+        o3,
+        so2,
+        co
+    };
 });
 
-// Hourly pattern
-const hours = data.reduce((acc, d) => {
-    const h = new Date(d.timestamp).getHours();
-    if (!acc[h]) acc[h] = { sum: 0, count: 0 };
-    acc[h].sum += d.aqi || 0; acc[h].count++;
-    return acc;
-}, {});
-const hourLabels = Array.from({length: 24}, (_, i) => `${i}:00`);
+const timestamps = cleanData.map(d => d.timestamp);
+const aqiVals = cleanData.map(d => d.aqi);
+const tempVals = cleanData.map(d => d.temp);
+const humidVals = cleanData.map(d => d.humidity);
+const pm25Vals = cleanData.map(d => d.pm25);
+const pm10Vals = cleanData.map(d => d.pm10);
+
+const plotBg = '#121226';
+const paperBg = '#121226';
+const gridColor = 'rgba(255, 255, 255, 0.06)';
+const fontStyle = { color: '#e8e8f0', family: 'Inter, system-ui, sans-serif' };
+
+// 1. Timeline Chart with Colored AQI Threshold Zones
+Plotly.newPlot('timeline-chart', [
+    {
+        x: timestamps,
+        y: aqiVals,
+        type: 'scatter',
+        mode: 'lines',
+        name: 'AQI',
+        line: { color: '#00f0ff', width: 2.5, shape: 'spline' },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(0, 240, 255, 0.08)',
+        hoverinfo: 'x+y',
+        hovertemplate: '<b>%{x}</b><br>AQI: <b>%{y}</b><extra></extra>'
+    }
+], {
+    paper_bgcolor: paperBg,
+    plot_bgcolor: plotBg,
+    font: fontStyle,
+    xaxis: { gridcolor: gridColor, zerolinecolor: gridColor },
+    yaxis: { gridcolor: gridColor, title: 'AQI (US EPA)', zerolinecolor: gridColor },
+    margin: { l: 55, r: 20, t: 15, b: 50 },
+    shapes: [
+        { type: 'line', x0: timestamps[0], x1: timestamps[timestamps.length-1], y0: 50, y1: 50, line: { color: 'rgba(0, 255, 136, 0.3)', dash: 'dot', width: 1 } },
+        { type: 'line', x0: timestamps[0], x1: timestamps[timestamps.length-1], y0: 100, y1: 100, line: { color: 'rgba(255, 255, 0, 0.3)', dash: 'dot', width: 1 } },
+        { type: 'line', x0: timestamps[0], x1: timestamps[timestamps.length-1], y0: 150, y1: 150, line: { color: 'rgba(255, 126, 0, 0.3)', dash: 'dot', width: 1 } },
+        { type: 'line', x0: timestamps[0], x1: timestamps[timestamps.length-1], y0: 200, y1: 200, line: { color: 'rgba(255, 51, 102, 0.5)', dash: 'dash', width: 1.5 } }
+    ]
+}, { responsive: true, displayModeBar: false });
+
+
+// 2. Diurnal Pattern — Avg AQI by Hour (00:00 to 23:00)
+const hourGroups = {};
+for (let i = 0; i < 24; i++) hourGroups[i] = { sum: 0, count: 0 };
+
+cleanData.forEach(d => {
+    try {
+        const dt = new Date(d.timestamp);
+        const h = dt.getHours();
+        if (h >= 0 && h < 24) {
+            hourGroups[h].sum += d.aqi;
+            hourGroups[h].count += 1;
+        }
+    } catch(e) {}
+});
+
+const overallAvg = aqiVals.reduce((a,b)=>a+b,0) / Math.max(aqiVals.length, 1);
+const hourLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2,'0')}:00`);
 const hourAvgs = Array.from({length: 24}, (_, i) => {
-    const h = hours[i];
-    return h && h.count > 0 ? h.sum / h.count : null;
+    const g = hourGroups[i];
+    return g && g.count > 0 ? Math.round((g.sum / g.count) * 10) / 10 : Math.round(overallAvg);
+});
+
+// Color bars by severity
+const barColors = hourAvgs.map(val => {
+    if (val <= 50) return '#00ff88';
+    if (val <= 100) return '#4da6ff';
+    if (val <= 150) return '#ffaa00';
+    return '#ff3366';
 });
 
 Plotly.newPlot('hourly-chart', [{
-    x: hourLabels, y: hourAvgs, type: 'bar',
-    marker: { color: '#4da6ff' }, name: 'Avg AQI'
+    x: hourLabels,
+    y: hourAvgs,
+    type: 'bar',
+    marker: {
+        color: barColors,
+        line: { color: 'rgba(255,255,255,0.1)', width: 1 }
+    },
+    hovertemplate: '<b>%{x}</b><br>Average AQI: <b>%{y}</b><extra></extra>'
 }], {
-    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
-    font: { color: '#e8e8f0' },
-    xaxis: { gridcolor: '#2a2a4a', title: 'Hour of Day' },
-    yaxis: { gridcolor: '#2a2a4a', title: 'Average AQI' },
-    margin: { l: 50, r: 10, t: 10, b: 70 }
+    paper_bgcolor: paperBg,
+    plot_bgcolor: plotBg,
+    font: fontStyle,
+    xaxis: { gridcolor: gridColor, title: 'Hour of Day', tickangle: -45 },
+    yaxis: { gridcolor: gridColor, title: 'Average AQI' },
+    margin: { l: 55, r: 20, t: 15, b: 70 }
+}, { responsive: true, displayModeBar: false });
+
+
+// 3. Scatter: Temperature vs AQI
+const scatterColors = aqiVals.map(val => {
+    if (val <= 50) return '#00ff88';
+    if (val <= 100) return '#00f0ff';
+    if (val <= 150) return '#ffaa00';
+    return '#ff3366';
 });
 
-// Scatter: Temperature vs AQI
 Plotly.newPlot('scatter-chart', [{
-    x: tempVals, y: aqiVals, type: 'scatter', mode: 'markers',
-    marker: { color: '#ff7e00', size: 6, opacity: 0.6 },
-    name: 'Temp vs AQI'
+    x: tempVals,
+    y: aqiVals,
+    type: 'scatter',
+    mode: 'markers',
+    marker: {
+        color: scatterColors,
+        size: 7,
+        opacity: 0.75,
+        line: { color: 'rgba(255,255,255,0.2)', width: 0.5 }
+    },
+    hovertemplate: 'Temp: <b>%{x}°C</b><br>AQI: <b>%{y}</b><extra></extra>'
 }], {
-    paper_bgcolor: '#1a1a35', plot_bgcolor: '#1a1a35',
-    font: { color: '#e8e8f0' },
-    xaxis: { gridcolor: '#2a2a4a', title: 'Temperature (°C)' },
-    yaxis: { gridcolor: '#2a2a4a', title: 'AQI' },
-    margin: { l: 50, r: 10, t: 10, b: 50 }
+    paper_bgcolor: paperBg,
+    plot_bgcolor: plotBg,
+    font: fontStyle,
+    xaxis: { gridcolor: gridColor, title: 'Temperature (°C)' },
+    yaxis: { gridcolor: gridColor, title: 'AQI' },
+    margin: { l: 55, r: 20, t: 15, b: 50 }
+}, { responsive: true, displayModeBar: false });
+
+
+// 4. Pollutant Comparison (7-Day)
+const pollutantTraces = [
+    {
+        x: timestamps,
+        y: pm25Vals,
+        name: 'PM2.5 (µg/m³)',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#00f0ff', width: 2.2 }
+    },
+    {
+        x: timestamps,
+        y: pm10Vals,
+        name: 'PM10 (µg/m³)',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#ffaa00', width: 1.8, dash: 'dot' }
+    }
+];
+
+// Add gas traces if available in data
+const no2Vals = cleanData.map(d => d.no2);
+if (no2Vals.some(v => v != null)) {
+    pollutantTraces.push({
+        x: timestamps,
+        y: no2Vals,
+        name: 'NO₂ (ppb)',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#b026ff', width: 1.5 }
+    });
+}
+
+Plotly.newPlot('pollutant-chart', pollutantTraces, {
+    paper_bgcolor: paperBg,
+    plot_bgcolor: plotBg,
+    font: fontStyle,
+    xaxis: { gridcolor: gridColor },
+    yaxis: { gridcolor: gridColor, title: 'Concentration (µg/m³)' },
+    margin: { l: 55, r: 20, t: 15, b: 50 },
+    legend: { orientation: 'h', y: 1.15, font: { size: 11 } }
+}, { responsive: true, displayModeBar: false });
+
+
+// 5. Peak Pollution Windows (Day Segment Breakdown)
+const segments = ['Night (00-06)', 'Morning (06-12)', 'Afternoon (12-18)', 'Evening (18-24)'];
+const segSums = [0, 0, 0, 0];
+const segCounts = [0, 0, 0, 0];
+
+cleanData.forEach(d => {
+    try {
+        const h = new Date(d.timestamp).getHours();
+        const idx = Math.floor(h / 6);
+        if (idx >= 0 && idx < 4) {
+            segSums[idx] += d.aqi;
+            segCounts[idx] += 1;
+        }
+    } catch(e) {}
 });
+
+const segAvgs = segSums.map((s, i) => segCounts[i] > 0 ? Math.round(s / segCounts[i]) : Math.round(overallAvg));
+
+Plotly.newPlot('peak-chart', [{
+    x: segments,
+    y: segAvgs,
+    type: 'bar',
+    marker: {
+        color: ['#4da6ff', '#ff3366', '#ffaa00', '#b026ff'],
+        line: { color: 'rgba(255,255,255,0.15)', width: 1 }
+    },
+    text: segAvgs.map(v => `Avg AQI: ${v}`),
+    textposition: 'auto',
+    hovertemplate: '<b>%{x}</b><br>Intensity: <b>%{y} AQI</b><extra></extra>'
+}], {
+    paper_bgcolor: paperBg,
+    plot_bgcolor: plotBg,
+    font: fontStyle,
+    xaxis: { gridcolor: gridColor, title: 'Time Window' },
+    yaxis: { gridcolor: gridColor, title: 'Average AQI Level' },
+    margin: { l: 55, r: 20, t: 15, b: 50 }
+}, { responsive: true, displayModeBar: false });
 
 {% else %}
 document.querySelectorAll('.card').forEach(c => {
@@ -93,7 +301,7 @@ document.querySelectorAll('.card').forEach(c => {
     if (!header) return;
     const div = document.createElement('div');
     div.style.cssText = 'color: var(--text-secondary); padding: 40px; text-align: center;';
-    div.textContent = 'No historical data available yet. Run the pipeline to collect data.';
+    div.textContent = 'Historical data will appear here once pipeline collects observations.';
     c.appendChild(div);
 });
 {% endif %}

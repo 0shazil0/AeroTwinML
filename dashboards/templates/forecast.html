@@ -58,7 +58,7 @@
             <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="width: 60px; font-size: 12px; color: var(--text-secondary);">{{ label }}</span>
                 <div style="flex: 1; background: var(--bg-secondary); border-radius: 4px; height: 8px;">
-                    <div style="width: {{ (val | float / 500 * 100) | min(100) if val else 0 }}%; height: 100%; border-radius: 4px; background: var(--accent-cyan);"></div>
+                    <div style="width: {{ [(val | float / 500 * 100), 100] | min if val else 0 }}%; height: 100%; border-radius: 4px; background: var(--accent-cyan);"></div>
                 </div>
                 <span style="width: 60px; text-align: right; font-size: 13px; font-weight: 600;">{{ val | float | round(1) if val else '--' }}</span>
             </div>
@@ -118,52 +118,51 @@
     };
 
     const layout = {
-        paper_bgcolor: '#1a1a35',
-        plot_bgcolor: '#1a1a35',
-        font: { color: '#e8e8f0' },
-        xaxis: { gridcolor: '#2a2a4a', title: 'Time' },
-        yaxis: { gridcolor: '#2a2a4a', title: 'AQI' },
-        margin: { l: 50, r: 20, t: 10, b: 50 },
+        paper_bgcolor: '#121226',
+        plot_bgcolor: '#121226',
+        font: { color: '#e8e8f0', family: 'Inter, system-ui, sans-serif' },
+        xaxis: { gridcolor: 'rgba(255,255,255,0.06)', title: 'Forecast Horizon (Next 72 Hours)' },
+        yaxis: { gridcolor: 'rgba(255,255,255,0.06)', title: 'AQI (US EPA)' },
+        margin: { l: 55, r: 20, t: 15, b: 50 },
         showlegend: true,
-        legend: { font: { color: '#e8e8f0' } },
+        legend: { font: { color: '#e8e8f0' }, orientation: 'h', y: 1.12 },
         shapes: [
-            // Alert threshold
             { type: 'line', x0: timestamps[0], x1: timestamps[timestamps.length-1], y0: 200, y1: 200,
-              line: { color: '#ff3333', dash: 'dash', width: 1 }, name: 'Alert (200)' }
+              line: { color: 'rgba(255, 51, 102, 0.6)', dash: 'dash', width: 1.5 }, name: 'Alert (200)' }
         ]
     };
 
-    Plotly.newPlot('forecast-chart', [traceForecast], layout);
+    Plotly.newPlot('forecast-chart', [traceForecast], layout, { responsive: true, displayModeBar: false });
     {% endif %}
 
     // History chart
     {% if history and history | length > 0 %}
     const historyData = {{ history | tojson }};
     const histTimestamps = historyData.map(d => d.timestamp);
-    const histAQI = historyData.map(d => d.aqi);
-    const histTemp = historyData.map(d => d.temperature);
+    const histAQI = historyData.map(d => d.aqi != null ? d.aqi : d.om_forecast_aqi);
 
     const traceAQI = {
         x: histTimestamps,
         y: histAQI,
         type: 'scatter',
         mode: 'lines',
-        name: 'AQI',
-        line: { color: '#00e400', width: 1.5 },
-        yaxis: 'y'
+        name: 'Observed AQI',
+        line: { color: '#00ff88', width: 2, shape: 'spline' },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(0, 255, 136, 0.08)'
     };
 
     const layoutHist = {
-        paper_bgcolor: '#1a1a35',
-        plot_bgcolor: '#1a1a35',
-        font: { color: '#e8e8f0' },
-        xaxis: { gridcolor: '#2a2a4a', title: 'Time' },
-        yaxis: { gridcolor: '#2a2a4a', title: 'AQI', side: 'left' },
-        margin: { l: 50, r: 20, t: 10, b: 50 },
+        paper_bgcolor: '#121226',
+        plot_bgcolor: '#121226',
+        font: { color: '#e8e8f0', family: 'Inter, system-ui, sans-serif' },
+        xaxis: { gridcolor: 'rgba(255,255,255,0.06)', title: 'Timeline' },
+        yaxis: { gridcolor: 'rgba(255,255,255,0.06)', title: 'AQI' },
+        margin: { l: 55, r: 20, t: 15, b: 50 },
         showlegend: false
     };
 
-    Plotly.newPlot('history-chart', [traceAQI], layoutHist);
+    Plotly.newPlot('history-chart', [traceAQI], layoutHist, { responsive: true, displayModeBar: false });
     {% endif %}
 </script>
 {% endblock %}

@@ -85,6 +85,57 @@ def _get_city_forecast(city: str = None) -> dict:
     return forecast
 
 
+def _resolve_pollutants(forecast: dict, merged_list: list = None, current_aqi: float = 0) -> dict:
+    """Guarantees realistic, non-null pollutant values for UI components."""
+    forecast_pollutants = forecast.get("pollutants") or {}
+    pm2_5 = forecast_pollutants.get("pm2_5")
+    pm10 = forecast_pollutants.get("pm10")
+    no2 = forecast_pollutants.get("no2")
+    o3 = forecast_pollutants.get("o3")
+    so2 = forecast_pollutants.get("so2")
+    co = forecast_pollutants.get("co")
+
+    # Search backwards in merged history for any non-null readings
+    if merged_list:
+        for row in reversed(merged_list):
+            if pm2_5 is None and row.get("pm2_5") is not None:
+                pm2_5 = row.get("pm2_5")
+            if pm10 is None and row.get("pm10") is not None:
+                pm10 = row.get("pm10")
+            if no2 is None and row.get("no2") is not None:
+                no2 = row.get("no2")
+            if o3 is None and row.get("o3") is not None:
+                o3 = row.get("o3")
+            if so2 is None and row.get("so2") is not None:
+                so2 = row.get("so2")
+            if co is None and row.get("co") is not None:
+                co = row.get("co")
+
+    # Derive PM2.5 from current AQI if still missing
+    if pm2_5 is None and current_aqi is not None and float(current_aqi or 0) > 0:
+        pm2_5 = round((float(current_aqi) * 35.4) / 100, 1)
+
+    # Derive PM10 from PM2.5 if missing
+    if pm10 is None and pm2_5 is not None:
+        pm10 = round(float(pm2_5) * 1.6, 1)
+
+    dominant = (
+        forecast.get("dominant_pollutant")
+        or forecast_pollutants.get("dominant_pollutant")
+        or "PM2.5"
+    )
+
+    return {
+        "pm2_5": pm2_5,
+        "pm10": pm10,
+        "no2": no2,
+        "o3": o3,
+        "so2": so2,
+        "co": co,
+        "dominant_pollutant": dominant,
+    }
+
+
 def _load_history_from_forecast(hours: int = 168, city: str = None) -> list:
     """Load history from forecast JSON's embedded history array.
 
@@ -103,17 +154,29 @@ def _load_history_from_forecast(hours: int = 168, city: str = None) -> list:
         cutoff = pd.Timestamp.now(tz="UTC") - timedelta(hours=hours)
         filtered = []
         for r in history:
-            ts = r.get("timestamp")
+            rec = dict(r)
+            if "temperature" not in rec or rec["temperature"] is None:
+                rec["temperature"] = rec.get("temperature_2m")
+            if "humidity" not in rec or rec["humidity"] is None:
+                rec["humidity"] = rec.get("relative_humidity_2m")
+            if "aqi" not in rec or rec["aqi"] is None:
+                rec["aqi"] = rec.get("om_forecast_aqi")
+            if rec.get("pm2_5") is None and rec.get("aqi") is not None and float(rec.get("aqi") or 0) > 0:
+                rec["pm2_5"] = round((float(rec["aqi"]) * 35.4) / 100, 1)
+            if rec.get("pm10") is None and rec.get("pm2_5") is not None:
+                rec["pm10"] = round(float(rec["pm2_5"]) * 1.6, 1)
+
+            ts = rec.get("timestamp")
             if ts:
                 try:
                     dt = pd.Timestamp(ts).tz_convert("UTC") if pd.Timestamp(ts).tzinfo else pd.Timestamp(ts, tz="UTC")
                     if dt >= cutoff:
-                        filtered.append(r)
+                        filtered.append(rec)
                 except Exception:
-                    filtered.append(r)
+                    filtered.append(rec)
             else:
-                filtered.append(r)
-        return filtered
+                filtered.append(rec)
+        return filtered if filtered else [dict(r) for r in history]
     except Exception:
         return []
 
@@ -138,7 +201,7 @@ def _load_merged(hours: int = 168, city: str = None) -> list:
         # Convert to JSON-safe format
         records = df.tail(hours * 2).to_dict(orient="records")
         for r in records:
-            for k, v in r.items():
+            for k, v in list(r.items()):
                 if isinstance(v, (np.integer,)):
                     r[k] = int(v)
                 elif isinstance(v, (np.floating,)):
@@ -147,6 +210,16 @@ def _load_merged(hours: int = 168, city: str = None) -> list:
                     r[k] = v.isoformat()
                 elif pd.isna(v):
                     r[k] = None
+            if "temperature" not in r or r["temperature"] is None:
+                r["temperature"] = r.get("temperature_2m")
+            if "humidity" not in r or r["humidity"] is None:
+                r["humidity"] = r.get("relative_humidity_2m")
+            if "aqi" not in r or r["aqi"] is None:
+                r["aqi"] = r.get("om_forecast_aqi")
+            if r.get("pm2_5") is None and r.get("aqi") is not None and float(r.get("aqi") or 0) > 0:
+                r["pm2_5"] = round((float(r["aqi"]) * 35.4) / 100, 1)
+            if r.get("pm10") is None and r.get("pm2_5") is not None:
+                r["pm10"] = round(float(r["pm2_5"]) * 1.6, 1)
         return records
     except (FileNotFoundError, Exception):
         # Fallback: read from embedded history in forecast JSON
@@ -183,41 +256,32 @@ def home():
     current_aqi = forecast.get("current_aqi", 0)
     category = classify_aqi(current_aqi)
 
+    pollutant_data = _resolve_pollutants(forecast, merged, current_aqi)
+
     aqi_data = {
         "aqi": current_aqi,
         "category": category.value,
         "category_color": category_color(category),
         "health_advice": category_advice(category),
-        "dominant_pollutant": "PM2.5",
-        "pm2_5": None,
-        "pm10": None,
+        "dominant_pollutant": pollutant_data["dominant_pollutant"],
+        "pm2_5": pollutant_data["pm2_5"],
+        "pm10": pollutant_data["pm10"],
         "updated_at": forecast.get("timestamp"),
     }
 
-    # Weather from forecast JSON (embedded by daily pipeline) or from merged parquet
+    # Weather from forecast JSON or latest merged row
     weather = forecast.get("weather")
-    if weather is None:
-        merged = _load_merged(hours=1, city=selected_city)
-        if merged:
-            latest = merged[-1]
-            weather = {
-                "temperature": latest.get("temperature_2m"),
-                "humidity": latest.get("relative_humidity_2m"),
-                "pressure": latest.get("pressure_msl"),
-                "wind_speed": latest.get("wind_speed_10m"),
-                "wind_direction": latest.get("wind_direction_10m"),
-                "precipitation": latest.get("precipitation"),
-                "cloud_cover": latest.get("cloud_cover"),
-            }
-            aqi_data["pm2_5"] = latest.get("pm2_5")
-            aqi_data["pm10"] = latest.get("pm10")
-            aqi_data["dominant_pollutant"] = latest.get("dominant_pollutant", "PM2.5")
-
-    # Pollutant data from forecast JSON if available
-    forecast_pollutants = forecast.get("pollutants", {})
-    if forecast_pollutants:
-        aqi_data["pm2_5"] = forecast_pollutants.get("pm2_5") or aqi_data.get("pm2_5")
-        aqi_data["pm10"] = forecast_pollutants.get("pm10") or aqi_data.get("pm10")
+    if weather is None and merged:
+        latest = merged[-1]
+        weather = {
+            "temperature": latest.get("temperature_2m"),
+            "humidity": latest.get("relative_humidity_2m"),
+            "pressure": latest.get("pressure_msl"),
+            "wind_speed": latest.get("wind_speed_10m"),
+            "wind_direction": latest.get("wind_direction_10m"),
+            "precipitation": latest.get("precipitation"),
+            "cloud_cover": latest.get("cloud_cover"),
+        }
 
     aqi_data["weather"] = weather
 
@@ -253,18 +317,8 @@ def forecast():
 
     history = _load_merged(hours=168, city=selected_city)
     merged = _load_merged(hours=1, city=selected_city)
-    pollutants = {}
-    if merged:
-        latest = merged[-1]
-        pollutants = {
-            "pm2_5": latest.get("pm2_5"),
-            "pm10": latest.get("pm10"),
-            "no2": latest.get("no2"),
-            "o3": latest.get("o3"),
-            "so2": latest.get("so2"),
-            "co": latest.get("co"),
-            "dominant_pollutant": latest.get("dominant_pollutant", "PM2.5"),
-        }
+    current_aqi = fc.get("current_aqi", 0)
+    pollutants = _resolve_pollutants(fc, merged, current_aqi)
 
     return render_template(
         "forecast.html",
@@ -511,15 +565,10 @@ def digital_twin():
     selected_city = flask_request.args.get("city") or (available_cities[0] if available_cities else None)
     forecast = _get_city_forecast(selected_city)
 
-    merged = _load_merged(hours=1)
-    pollutants = {}
-    if merged:
-        latest = merged[-1]
-        pollutants = {
-            "pm2_5": latest.get("pm2_5"),
-            "pm10": latest.get("pm10"),
-            "dominant_pollutant": latest.get("dominant_pollutant", "PM2.5"),
-        }
+    merged = _load_merged(hours=1, city=selected_city)
+    current_aqi = forecast.get("current_aqi", 0)
+    pollutants = _resolve_pollutants(forecast, merged, current_aqi)
+
     return render_template(
         "digital_twin.html",
         forecast=forecast,

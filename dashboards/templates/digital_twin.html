@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Digital Twin{% endblock %}
+{% block title %}3D Digital Twin Simulation{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -10,180 +10,259 @@
     cursor: grab;
 }
 #twin-canvas:active { cursor: grabbing; }
+
+.twin-hud-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(10, 10, 26, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: var(--radius-md);
+    padding: 18px 22px;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+.twin-hud-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent-cyan);
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-family: 'Outfit', sans-serif;
+}
+.twin-hud-aqi {
+    font-size: 42px;
+    font-weight: 900;
+    font-family: 'Outfit', sans-serif;
+    line-height: 1;
+}
+
+.twin-hud-badges {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+    pointer-events: none;
+}
+
 .twin-controls {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 16px 20px;
+    padding: 18px 24px;
     background: var(--bg-card);
+    backdrop-filter: blur(16px);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
-    margin-top: 16px;
+    margin-top: 20px;
     flex-wrap: wrap;
 }
+
 .twin-slider {
     flex: 1;
-    min-width: 200px;
+    min-width: 220px;
     -webkit-appearance: none;
-    height: 6px;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #00e400, #ff7e00, #ff3333);
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #00ff88 0%, #facc15 30%, #ff9900 60%, #ff3366 100%);
     outline: none;
 }
 .twin-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 22px; height: 22px;
     border-radius: 50%;
-    background: var(--accent-cyan);
+    background: #00f0ff;
     cursor: pointer;
-    box-shadow: 0 0 14px var(--accent-cyan);
+    box-shadow: 0 0 16px #00f0ff;
     border: 2px solid white;
+    transition: transform 0.15s;
 }
+.twin-slider::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
 .twin-time-label {
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--accent-cyan);
-    min-width: 140px;
+    min-width: 130px;
     text-align: center;
-    font-variant-numeric: tabular-nums;
+    font-family: 'Outfit', sans-serif;
     letter-spacing: 0.5px;
 }
-.twin-legend {
-    display: flex;
-    gap: 18px;
-    font-size: 11px;
-    color: var(--text-secondary);
-}
-.twin-legend-item {
-    display: flex;
+
+.twin-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 9px 18px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    transition: all var(--transition);
+    display: inline-flex;
     align-items: center;
     gap: 6px;
 }
-.twin-legend-swatch {
-    width: 14px; height: 14px; border-radius: 3px;
+.twin-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.twin-btn.active {
+    background: var(--accent-cyan);
+    color: #080812;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
 }
+
 .twin-tooltip {
     position: fixed;
-    background: rgba(10, 10, 30, 0.95);
+    background: rgba(12, 12, 28, 0.95);
     border: 1px solid var(--accent-cyan);
     border-radius: var(--radius-sm);
-    padding: 10px 14px;
+    padding: 12px 16px;
     font-size: 12px;
     pointer-events: none;
     z-index: 1000;
     display: none;
-    backdrop-filter: blur(8px);
-}
-.twin-btn {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
-}
-.twin-btn:hover { border-color: var(--accent-cyan); }
-.twin-btn.active { background: var(--accent-cyan); color: var(--bg-primary); border-color: var(--accent-cyan); }
-.twin-info-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    min-width: 180px;
-}
-.twin-info-value {
-    font-size: 28px; font-weight: 800;
-    color: var(--accent-cyan);
-}
-.twin-info-label {
-    font-size: 11px; color: var(--text-secondary);
-    text-transform: uppercase; letter-spacing: 1px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-    <h2 style="font-size: 24px; font-weight: 700;">🌐 Digital Twin — {{ city }}</h2>
-    <div class="twin-legend">
-        <div class="twin-legend-item"><span class="twin-legend-swatch" style="background:#00e400;"></span> Good (0-50)</div>
-        <div class="twin-legend-item"><span class="twin-legend-swatch" style="background:#ffff00;"></span> Moderate (51-100)</div>
-        <div class="twin-legend-item"><span class="twin-legend-swatch" style="background:#ff7e00;"></span> Sensitive (101-150)</div>
-        <div class="twin-legend-item"><span class="twin-legend-swatch" style="background:#ff3333;"></span> Unhealthy (151+)</div>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <h2 style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">
+            🌐 3D Digital Twin — {{ city }} Smart Airshed
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 13px;">
+            Interactive spatial simulation of atmospheric dispersion, urban aerodynamics & pollutant transport
+        </p>
+    </div>
+    <div style="display: flex; gap: 14px; font-size: 12px; align-items: center;" class="twin-legend">
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #00ff88;"></span> Good (0-50)</span>
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #facc15;"></span> Moderate (51-100)</span>
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #ff9900;"></span> Sensitive (101-150)</span>
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #ff3366;"></span> Unhealthy (151+)</span>
     </div>
 </div>
 
-<div class="grid-1-2" style="margin-bottom: 16px;">
-    <!-- Twin Viewport -->
-    <div class="twin-container" style="height: 520px;">
+<div class="grid-1-2" style="margin-bottom: 20px;">
+    <!-- 3D Canvas Viewport -->
+    <div class="twin-container" style="height: 560px;">
+        <!-- HUD Glass Overlay -->
+        <div class="twin-hud-overlay">
+            <div class="twin-hud-title">Atmospheric Simulation</div>
+            <div class="twin-hud-aqi" id="hud-aqi-num">--</div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 4px;" id="hud-category-label">Calculating...</div>
+        </div>
+
+        <div class="twin-hud-badges">
+            <div class="badge badge-info" id="hud-sim-time">Simulated: Now (0h)</div>
+            <div class="badge badge-good" id="hud-wind-badge">Wind: 14.5 km/h SW</div>
+        </div>
+
         <canvas id="twin-canvas"></canvas>
     </div>
 
-    <!-- Info Panel -->
-    <div style="display: flex; flex-direction: column; gap: 12px;">
+    <!-- Diagnostic Panels -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
         <div class="twin-info-panel">
-            <div class="twin-info-label">Predicted AQI</div>
+            <div class="twin-info-label">Current / Forecast AQI</div>
             <div class="twin-info-value" id="twin-aqi">--</div>
-            <div class="twin-info-label" id="twin-time-info">Now</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;" id="twin-time-info">Live Ground Truth</div>
         </div>
+
         <div class="twin-info-panel">
-            <div class="twin-info-label">Category</div>
-            <div style="font-size: 16px; font-weight: 700;" id="twin-category">--</div>
-        </div>
-        <div class="twin-info-panel">
-            <div class="twin-info-label">Dominant Pollutant</div>
-            <div style="font-size: 14px; color: var(--text-secondary);" id="twin-pollutant">
-                {{ pollutants.dominant_pollutant or 'PM2.5' }}
+            <div class="twin-info-label">Pollutant Dispersion</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                <div>
+                    <div style="font-size: 18px; font-weight: 800; color: var(--accent-cyan);" id="twin-pm25">
+                        {{ pollutants.pm2_5 or 25 }} µg/m³
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted);">PM2.5 Load</div>
+                </div>
+                <div>
+                    <div style="font-size: 18px; font-weight: 800; color: var(--accent-yellow);" id="twin-pm10">
+                        {{ pollutants.pm10 or 40 }} µg/m³
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted);">PM10 Load</div>
+                </div>
             </div>
         </div>
+
         <div class="twin-info-panel">
-            <div class="twin-info-label">Wind</div>
-            <div style="font-size: 14px; color: var(--text-secondary);" id="twin-wind">--</div>
+            <div class="twin-info-label">Dominant Vector</div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" id="twin-pollutant">
+                {{ pollutants.dominant_pollutant or 'PM2.5 Fine Particulate' }}
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="twin-wind-detail">
+                Speed: 4.2 m/s | Dispersion: Moderate
+            </div>
+        </div>
+
+        <div class="twin-info-panel">
+            <div class="twin-info-label">Navigation & Orbit</div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+                • <b>Drag</b> to rotate & pan isometric perspective<br>
+                • <b>Scroll</b> to zoom in/out of city blocks<br>
+                • <b>Hover</b> over station nodes for telemetry
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Controls -->
+<!-- Simulation Controls -->
 <div class="twin-controls">
-    <button class="twin-btn active" onclick="setLayer('aqi')" id="btn-aqi">AQI Heat</button>
-    <button class="twin-btn" onclick="setLayer('pm25')" id="btn-pm25">PM2.5</button>
-    <button class="twin-btn" onclick="setLayer('wind')" id="btn-wind">Wind</button>
-    <button class="twin-btn" onclick="toggleParticles()" id="btn-particles">Particles</button>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="twin-btn active" onclick="setLayer('all')" id="btn-all">✨ Full Sim</button>
+        <button class="twin-btn" onclick="setLayer('particles')" id="btn-particles">🌫 Particles</button>
+        <button class="twin-btn" onclick="setLayer('wind')" id="btn-wind">💨 Wind Streamlines</button>
+        <button class="twin-btn" onclick="setLayer('heat')" id="btn-heat">🔥 Heatmap</button>
+    </div>
 
     <div style="flex: 1;"></div>
 
-    <span style="font-size: 12px; color: var(--text-secondary);">Now</span>
-    <input type="range" class="twin-slider" min="0" max="72" value="0" id="twin-slider" oninput="updateTimeSlider(this.value)">
-    <span style="font-size: 12px; color: var(--text-secondary);">+72h</span>
-    <span class="twin-time-label" id="twin-time-label">Now (0h)</span>
+    <div style="display: flex; align-items: center; gap: 12px; flex: 1.5; min-width: 280px;">
+        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">NOW</span>
+        <input type="range" class="twin-slider" min="0" max="72" value="0" id="twin-slider" oninput="updateTimeSlider(this.value)">
+        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">+72H</span>
+        <span class="twin-time-label" id="twin-time-label">Now (0h)</span>
+    </div>
 
-    <button class="twin-btn" onclick="togglePlay()" id="btn-play">▶ Play</button>
+    <button class="twin-btn" onclick="togglePlay()" id="btn-play" style="background: rgba(0, 240, 255, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan);">
+        ▶ Run Playback
+    </button>
+    <button class="twin-btn" onclick="resetCamera()">↺ Reset View</button>
 </div>
 
 <div class="twin-tooltip" id="twin-tooltip"></div>
 
 <script>
 // ==========================================
-// Digital Twin — 2.5D Hyderabad View
+// 3D Isometric Digital Twin Engine
 // ==========================================
 
 const canvas = document.getElementById('twin-canvas');
 const ctx = canvas.getContext('2d');
 
 let W, H;
-let offsetX = 0, offsetY = 0;
-let zoom = 1;
-let dragging = false;
-let dragStartX, dragStartY;
-let currentLayer = 'aqi';
-let showParticles = true;
-let timeOffset = 0; // 0-72 hours
+let cameraX = 0, cameraY = 0;
+let zoom = 1.0;
+let isDragging = false;
+let startX, startY;
+let activeLayer = 'all';
+let timeOffset = 0;
 let isPlaying = false;
-let playInterval;
+let playTimer = null;
 
-// AQI forecast data
+// Forecast interpolated points
 {% set fc = forecast.forecast or {} %}
 const forecastAQI = {
     0: {{ forecast.current_aqi or 50 }},
@@ -192,356 +271,374 @@ const forecastAQI = {
     72: {{ fc.get('72h', {}).get('aqi', 50) or 50 }}
 };
 
-// Hyderabad landmarks (relative positions on canvas)
+// Isometric coordinate transform helper
+function toIso(x, y, z = 0) {
+    const isoX = (x - y) * Math.cos(Math.PI / 6);
+    const isoY = (x + y) * Math.sin(Math.PI / 6) - z;
+    return { x: isoX, y: isoY };
+}
+
+// Landmarks & Sensor Stations
 const landmarks = [
-    { name: 'City Center', x: 0.5, y: 0.45, type: 'city' },
-    { name: 'Station A546205', x: 0.48, y: 0.48, type: 'station' },
-    { name: 'Industrial Zone', x: 0.65, y: 0.4, type: 'industrial' },
-    { name: 'Residential North', x: 0.35, y: 0.3, type: 'residential' },
-    { name: 'Residential South', x: 0.4, y: 0.6, type: 'residential' },
-    { name: 'Green Belt', x: 0.25, y: 0.55, type: 'green' },
-    { name: 'Commercial Hub', x: 0.55, y: 0.5, type: 'commercial' },
+    { name: 'City Center Hub', gridX: 0, gridY: 0, height: 90, type: 'tower', color: '#00f0ff' },
+    { name: 'Monitoring Station A546205', gridX: -60, gridY: 40, height: 35, type: 'sensor', color: '#00ff88' },
+    { name: 'OpenAQ Node #4889110', gridX: 50, gridY: -50, height: 30, type: 'sensor', color: '#00ff88' },
+    { name: 'Industrial Corridor (Site Area)', gridX: 110, gridY: 80, height: 55, type: 'industrial', color: '#ffaa00' },
+    { name: 'Indus Green Corridor', gridX: -120, gridY: -70, height: 15, type: 'park', color: '#00ff88' },
+    { name: 'Commercial District North', gridX: -50, gridY: -90, height: 70, type: 'tower', color: '#b026ff' },
+    { name: 'Residential Zone East', gridX: 90, gridY: -20, height: 40, type: 'residential', color: '#4da6ff' },
+    { name: 'Logistics Bypass Terminal', gridX: -80, gridY: 100, height: 30, type: 'commercial', color: '#3b82f6' }
 ];
 
-// Particles for wind/pollution animation
+// Aerodynamic pollution particles
 let particles = [];
-const MAX_PARTICLES = 80;
+const NUM_PARTICLES = 160;
 
 function initParticles() {
     particles = [];
-    for (let i = 0; i < MAX_PARTICLES; i++) {
+    for (let i = 0; i < NUM_PARTICLES; i++) {
         particles.push({
-            x: Math.random() * W,
-            y: Math.random() * H,
-            vx: (Math.random() - 0.5) * 0.8,
-            vy: (Math.random() - 0.3) * 0.8,
-            size: Math.random() * 2 + 0.5,
-            alpha: Math.random() * 0.4 + 0.2,
-            life: Math.random() * 100,
+            x: (Math.random() - 0.5) * 600,
+            y: (Math.random() - 0.5) * 600,
+            z: Math.random() * 80 + 5,
+            vx: Math.random() * 1.5 + 0.5,
+            vy: Math.random() * 0.8 + 0.2,
+            vz: (Math.random() - 0.5) * 0.2,
+            size: Math.random() * 3 + 1.2,
+            alpha: Math.random() * 0.5 + 0.2,
+            life: Math.random() * 120 + 30
         });
     }
 }
 
-function getInterpolatedAQI(hour) {
-    const keys = Object.keys(forecastAQI).map(Number).sort((a, b) => a - b);
-    if (hour <= keys[0]) return forecastAQI[keys[0]];
-    if (hour >= keys[keys.length - 1]) return forecastAQI[keys[keys.length - 1]];
-
+function getAQI(h) {
+    const keys = [0, 24, 48, 72];
+    if (h <= 0) return forecastAQI[0];
+    if (h >= 72) return forecastAQI[72];
     for (let i = 0; i < keys.length - 1; i++) {
-        if (hour >= keys[i] && hour <= keys[i + 1]) {
-            const t = (hour - keys[i]) / (keys[i + 1] - keys[i]);
-            return forecastAQI[keys[i]] + (forecastAQI[keys[i + 1]] - forecastAQI[keys[i]]) * t;
+        if (h >= keys[i] && h <= keys[i+1]) {
+            const t = (h - keys[i]) / (keys[i+1] - keys[i]);
+            return forecastAQI[keys[i]] + (forecastAQI[keys[i+1]] - forecastAQI[keys[i]]) * t;
         }
     }
     return 50;
 }
 
-function aqiToColor(aqi) {
-    if (aqi <= 50) {
-        const t = aqi / 50;
-        return { r: 0, g: Math.round(100 + 128 * t), b: Math.round(50 + 50 * t) };
-    }
-    if (aqi <= 100) {
-        const t = (aqi - 50) / 50;
-        return { r: Math.round(180 * t), g: 200, b: Math.round(50 * (1 - t)) };
-    }
-    if (aqi <= 150) {
-        const t = (aqi - 100) / 50;
-        return { r: 255, g: Math.round(140 * (1 - t)), b: 0 };
-    }
-    if (aqi <= 200) {
-        const t = (aqi - 150) / 50;
-        return { r: 255, g: Math.round(70 * (1 - t)), b: Math.round(30 * t) };
-    }
-    return { r: 140, g: 20, b: 30 };
+function getAQIColor(aqi) {
+    if (aqi <= 50) return { r: 0, g: 255, b: 136, hex: '#00ff88', label: 'Good' };
+    if (aqi <= 100) return { r: 250, g: 204, b: 21, hex: '#facc15', label: 'Moderate' };
+    if (aqi <= 150) return { r: 255, g: 153, b: 0, hex: '#ff9900', label: 'Unhealthy (Sensitive)' };
+    if (aqi <= 200) return { r: 255, g: 51, b: 102, hex: '#ff3366', label: 'Unhealthy' };
+    return { r: 176, g: 38, b: 255, hex: '#b026ff', label: 'Very Unhealthy / Hazardous' };
 }
 
 function resize() {
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    const parent = canvas.parentElement;
+    canvas.width = parent.clientWidth;
+    canvas.height = parent.clientHeight;
     W = canvas.width;
     H = canvas.height;
     initParticles();
 }
 
-function drawSky(aqi) {
-    const color = aqiToColor(aqi);
-    const darkR = Math.round(10 + color.r * 0.05);
-    const darkG = Math.round(10 + color.g * 0.05);
-    const darkB = Math.round(20 + color.b * 0.05);
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
-    skyGrad.addColorStop(0, `rgb(${darkR + 20},${darkG + 20},${darkB + 20})`);
-    skyGrad.addColorStop(0.4, `rgb(${darkR},${darkG},${darkB})`);
-    skyGrad.addColorStop(1, `rgb(${Math.round(darkR*0.6)},${Math.round(darkG*0.6)},${Math.round(darkB*1.2)})`);
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, W, H);
+// 3D Isometric Rendering
+function drawIsometricGrid() {
+    const gridSize = 7;
+    const step = 45;
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+    ctx.lineWidth = 1;
+
+    for (let i = -gridSize; i <= gridSize; i++) {
+        const p1 = toIso(i * step, -gridSize * step, 0);
+        const p2 = toIso(i * step, gridSize * step, 0);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+
+        const p3 = toIso(-gridSize * step, i * step, 0);
+        const p4 = toIso(gridSize * step, i * step, 0);
+        ctx.beginPath();
+        ctx.moveTo(p3.x, p3.y);
+        ctx.lineTo(p4.x, p4.y);
+        ctx.stroke();
+    }
 }
 
-function drawGround() {
-    // Simplified terrain
-    ctx.fillStyle = '#1a2a20';
+function drawBuilding3D(gx, gy, w, l, h, color, aqiCol) {
+    const base = toIso(gx, gy, 0);
+    const top = toIso(gx, gy, h);
+    const rightBase = toIso(gx + w, gy, 0);
+    const rightTop = toIso(gx + w, gy, h);
+    const leftBase = toIso(gx, gy + l, 0);
+    const leftTop = toIso(gx, gy + l, h);
+    const farTop = toIso(gx + w, gy + l, h);
+
+    // Left Face
+    ctx.fillStyle = `rgba(16, 20, 44, 0.9)`;
     ctx.beginPath();
-    ctx.moveTo(0, H * 0.55);
-    ctx.quadraticCurveTo(W * 0.3, H * 0.50, W * 0.5, H * 0.48);
-    ctx.quadraticCurveTo(W * 0.7, H * 0.46, W, H * 0.52);
-    ctx.lineTo(W, H);
-    ctx.lineTo(0, H);
+    ctx.moveTo(base.x, base.y);
+    ctx.lineTo(leftBase.x, leftBase.y);
+    ctx.lineTo(leftTop.x, leftTop.y);
+    ctx.lineTo(top.x, top.y);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+    ctx.stroke();
 
-    // Roads (grid lines)
-    ctx.strokeStyle = 'rgba(40, 40, 60, 0.5)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
-        const y = H * 0.35 + (i / 8) * H * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y);
-        ctx.stroke();
-    }
-    for (let i = 0; i < 6; i++) {
-        const x = W * 0.15 + (i / 6) * W * 0.7;
-        ctx.beginPath();
-        ctx.moveTo(x, H * 0.35);
-        ctx.lineTo(x, H * 0.85);
-        ctx.stroke();
-    }
+    // Right Face
+    ctx.fillStyle = `rgba(24, 28, 60, 0.9)`;
+    ctx.beginPath();
+    ctx.moveTo(base.x, base.y);
+    ctx.lineTo(rightBase.x, rightBase.y);
+    ctx.lineTo(rightTop.x, rightTop.y);
+    ctx.lineTo(top.x, top.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Roof Face
+    ctx.fillStyle = `rgba(35, 42, 85, 0.95)`;
+    ctx.beginPath();
+    ctx.moveTo(top.x, top.y);
+    ctx.lineTo(rightTop.x, rightTop.y);
+    ctx.lineTo(farTop.x, farTop.y);
+    ctx.lineTo(leftTop.x, leftTop.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Glowing Rooftop Beacon
+    ctx.beginPath();
+    ctx.arc(farTop.x, farTop.y - 4, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
 }
 
-function drawCitySilhouette() {
-    // Simple building blocks
-    const buildings = [
-        { x: 0.15, w: 0.06, h: 0.12 },
-        { x: 0.22, w: 0.04, h: 0.08 },
-        { x: 0.28, w: 0.05, h: 0.15 },
-        { x: 0.35, w: 0.08, h: 0.09 },
-        { x: 0.44, w: 0.06, h: 0.16 },
-        { x: 0.52, w: 0.05, h: 0.11 },
-        { x: 0.58, w: 0.07, h: 0.13 },
-        { x: 0.68, w: 0.05, h: 0.10 },
-        { x: 0.75, w: 0.06, h: 0.08 },
-    ];
+function drawCity() {
+    const aqi = getAQI(timeOffset);
+    const aqiCol = getAQIColor(aqi);
 
-    const aqi = getInterpolatedAQI(timeOffset);
-    const color = aqiToColor(aqi);
-
-    buildings.forEach(b => {
-        const x = b.x * W;
-        const y = H * 0.48 - b.h * H;
-        const w = b.w * W;
-        const h = b.h * H;
-
-        // Building glow based on AQI
-        const glowGrad = ctx.createLinearGradient(x, y, x, y + h);
-        glowGrad.addColorStop(0, `rgba(${Math.round(color.r*0.6)},${Math.round(color.g*0.6)},${Math.round(color.b*0.6)},0.8)`);
-        glowGrad.addColorStop(1, `rgba(${color.r},${color.g},${color.b},0.3)`);
-
-        ctx.fillStyle = glowGrad;
-        ctx.fillRect(x, y, w, h);
-
-        // Windows
-        ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},0.6)`;
-        for (let wy = y + h * 0.1; wy < y + h * 0.9; wy += h * 0.15) {
-            for (let wx = x + w * 0.15; wx < x + w * 0.85; wx += w * 0.25) {
-                if (Math.random() > 0.3) {
-                    ctx.fillRect(wx, wy, w * 0.1, h * 0.08);
-                }
-            }
-        }
-    });
-}
-
-function drawAQIHeat(aqi) {
-    const color = aqiToColor(aqi);
-    const heatGrad = ctx.createRadialGradient(W * 0.5, H * 0.45, W * 0.05, W * 0.5, H * 0.45, W * 0.8);
-    heatGrad.addColorStop(0, `rgba(${color.r},${color.g},${color.b},0.5)`);
-    heatGrad.addColorStop(0.5, `rgba(${color.r},${color.g},${color.b},0.2)`);
-    heatGrad.addColorStop(1, `rgba(${color.r},${color.g},${color.b},0)`);
-    ctx.fillStyle = heatGrad;
-    ctx.fillRect(0, 0, W, H * 0.7);
-}
-
-function drawLandmarks() {
     landmarks.forEach(lm => {
-        const x = lm.x * W;
-        const y = lm.y * H;
+        const w = lm.type === 'tower' ? 28 : (lm.type === 'industrial' ? 42 : 22);
+        const l = lm.type === 'tower' ? 28 : (lm.type === 'industrial' ? 36 : 22);
+        drawBuilding3D(lm.gridX, lm.gridY, w, l, lm.height, lm.color, aqiCol);
 
-        if (lm.type === 'station') {
-            // Station marker (pulsing)
-            const pulse = 1 + Math.sin(Date.now() * 0.005) * 0.3;
+        // Sensor Radar Pulse
+        if (lm.type === 'sensor') {
+            const pos = toIso(lm.gridX, lm.gridY, lm.height + 8);
+            const pulse = (Date.now() % 1600) / 1600;
             ctx.beginPath();
-            ctx.arc(x, y, 8 * pulse * zoom, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 212, 255, 0.6)';
-            ctx.fill();
-            ctx.strokeStyle = '#00d4ff';
-            ctx.lineWidth = 2;
+            ctx.arc(pos.x, pos.y, 8 + pulse * 22, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(0, 255, 136, ${1 - pulse})`;
+            ctx.lineWidth = 1.5;
             ctx.stroke();
-        } else if (lm.type === 'industrial') {
-            ctx.fillStyle = '#cc8833';
-            ctx.fillRect(x - 12, y - 8, 24, 16);
-        } else if (lm.type === 'green') {
+
             ctx.beginPath();
-            ctx.arc(x, y, 14, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 180, 80, 0.4)';
+            ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#00ff88';
             ctx.fill();
         }
 
-        // Label
-        ctx.fillStyle = '#e8e8f0';
-        ctx.font = `${10 * zoom}px Inter, sans-serif`;
+        // Landmark Label Tag
+        const tagPos = toIso(lm.gridX, lm.gridY, lm.height + 18);
+        ctx.fillStyle = 'rgba(240, 242, 255, 0.9)';
+        ctx.font = '600 10px Outfit, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(lm.name, x, y + 18);
+        ctx.fillText(lm.name, tagPos.x, tagPos.y);
     });
 }
 
-function updateParticles() {
-    if (!showParticles) return;
+function drawWindStreamlines() {
+    if (activeLayer !== 'all' && activeLayer !== 'wind') return;
+    const aqi = getAQI(timeOffset);
+    const time = Date.now() * 0.0015;
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.lineWidth = 1.2;
 
-    const aqi = getInterpolatedAQI(timeOffset);
-    const color = aqiToColor(aqi);
-    const windStrength = 1 + (aqi / 200);
-
-    particles.forEach(p => {
-        p.life--;
-        if (p.life <= 0) {
-            p.x = Math.random() * W;
-            p.y = Math.random() * H;
-            p.life = Math.random() * 100 + 50;
-        }
-        p.x += p.vx * windStrength;
-        p.y += p.vy * windStrength;
-        if (p.x < 0) p.x = W;
-        if (p.x > W) p.x = 0;
-        if (p.y < 0) p.y = H;
-        if (p.y > H) p.y = 0;
-    });
-}
-
-function drawParticles() {
-    if (!showParticles) return;
-    const aqi = getInterpolatedAQI(timeOffset);
-    const color = aqiToColor(aqi);
-
-    particles.forEach(p => {
+    for (let i = -4; i <= 4; i++) {
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${color.r},${color.g},${color.b},${p.alpha})`;
+        const start = toIso(-240, i * 60, 20);
+        ctx.moveTo(start.x, start.y);
+        for (let step = 0; step < 8; step++) {
+            const x = -240 + step * 60;
+            const y = i * 60 + Math.sin(time + step * 0.5) * 15;
+            const z = 20 + Math.cos(time + step * 0.5) * 5;
+            const pt = toIso(x, y, z);
+            ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.stroke();
+    }
+}
+
+function updateAndDrawParticles() {
+    if (activeLayer !== 'all' && activeLayer !== 'particles') return;
+    const aqi = getAQI(timeOffset);
+    const aqiCol = getAQIColor(aqi);
+
+    particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.z += p.vz;
+        p.life -= 0.5;
+
+        if (p.life <= 0 || p.x > 300 || p.y > 300) {
+            p.x = (Math.random() - 0.5) * 400 - 100;
+            p.y = (Math.random() - 0.5) * 400 - 100;
+            p.z = Math.random() * 80 + 5;
+            p.life = Math.random() * 120 + 30;
+        }
+
+        const iso = toIso(p.x, p.y, p.z);
+        ctx.beginPath();
+        ctx.arc(iso.x, iso.y, p.size * zoom, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${aqiCol.r}, ${aqiCol.g}, ${aqiCol.b}, ${p.alpha * 0.65})`;
         ctx.fill();
     });
 }
 
-function drawHUD() {
-    const aqi = getInterpolatedAQI(timeOffset);
-    const color = aqiToColor(aqi);
-    const category = aqi <= 50 ? 'Good' : aqi <= 100 ? 'Moderate' : aqi <= 150 ? 'Unhealthy (Sensitive)' : aqi <= 200 ? 'Unhealthy' : aqi <= 300 ? 'Very Unhealthy' : 'Hazardous';
+function drawHeatAtmosphere() {
+    if (activeLayer !== 'all' && activeLayer !== 'heat') return;
+    const aqi = getAQI(timeOffset);
+    const aqiCol = getAQIColor(aqi);
 
-    document.getElementById('twin-aqi').textContent = Math.round(aqi);
-    document.getElementById('twin-aqi').style.color = `rgb(${color.r},${color.g},${color.b})`;
-    document.getElementById('twin-category').textContent = category;
-    document.getElementById('twin-category').style.color = `rgb(${color.r},${color.g},${color.b})`;
-    document.getElementById('twin-wind').textContent = `${(5 + aqi/20).toFixed(1)} m/s`;
+    const grad = ctx.createRadialGradient(0, 0, 10, 0, 0, 320);
+    grad.addColorStop(0, `rgba(${aqiCol.r}, ${aqiCol.g}, ${aqiCol.b}, 0.25)`);
+    grad.addColorStop(0.5, `rgba(${aqiCol.r}, ${aqiCol.g}, ${aqiCol.b}, 0.10)`);
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(-W, -H, W * 2, H * 2);
 }
 
 function render() {
-    const aqi = getInterpolatedAQI(timeOffset);
-
     ctx.clearRect(0, 0, W, H);
 
     ctx.save();
-    ctx.translate(offsetX, offsetY);
+    ctx.translate(W / 2 + cameraX, H / 2 + cameraY);
     ctx.scale(zoom, zoom);
 
-    drawSky(aqi);
-    if (currentLayer === 'aqi' || currentLayer === 'pm25') drawAQIHeat(aqi);
-    drawGround();
-    drawCitySilhouette();
-    drawLandmarks();
-    updateParticles();
-    drawParticles();
+    drawHeatAtmosphere();
+    drawIsometricGrid();
+    drawWindStreamlines();
+    drawCity();
+    updateAndDrawParticles();
 
     ctx.restore();
-    drawHUD();
 
+    updateHUD();
     requestAnimationFrame(render);
 }
 
-// Controls
+function updateHUD() {
+    const aqi = Math.round(getAQI(timeOffset));
+    const aqiCol = getAQIColor(aqi);
+
+    document.getElementById('hud-aqi-num').textContent = aqi;
+    document.getElementById('hud-aqi-num').style.color = aqiCol.hex;
+    document.getElementById('hud-category-label').textContent = aqiCol.label;
+    document.getElementById('hud-category-label').style.color = aqiCol.hex;
+
+    document.getElementById('twin-aqi').textContent = aqi;
+    document.getElementById('twin-aqi').style.color = aqiCol.hex;
+
+    const pm25Val = Math.round((aqi * 35.4 / 100) * 10) / 10;
+    const pm10Val = Math.round(pm25Val * 1.6 * 10) / 10;
+    document.getElementById('twin-pm25').textContent = `${pm25Val} µg/m³`;
+    document.getElementById('twin-pm10').textContent = `${pm10Val} µg/m³`;
+}
+
+// Interaction controls
 function updateTimeSlider(val) {
     timeOffset = parseInt(val);
-    document.getElementById('twin-time-label').textContent =
-        timeOffset === 0 ? 'Now (0h)' : `+${timeOffset}h`;
-    document.getElementById('twin-time-info').textContent =
-        timeOffset === 0 ? 'Now' : `+${timeOffset} hours`;
+    const label = timeOffset === 0 ? 'Now (0h)' : `+${timeOffset}h Forecast`;
+    document.getElementById('twin-time-label').textContent = label;
+    document.getElementById('hud-sim-time').textContent = `Simulated: ${label}`;
+    document.getElementById('twin-time-info').textContent = timeOffset === 0 ? 'Live Ground Truth' : `+${timeOffset} Hours Simulated Trend`;
 }
 
 function setLayer(layer) {
-    currentLayer = layer;
+    activeLayer = layer;
     document.querySelectorAll('.twin-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${layer}`)?.classList.add('active');
-}
-
-function toggleParticles() {
-    showParticles = !showParticles;
-    document.getElementById('btn-particles').classList.toggle('active', showParticles);
 }
 
 function togglePlay() {
     const btn = document.getElementById('btn-play');
     if (isPlaying) {
-        clearInterval(playInterval);
-        btn.textContent = '▶ Play';
+        clearInterval(playTimer);
         isPlaying = false;
+        btn.textContent = '▶ Run Playback';
     } else {
-        btn.textContent = '⏸ Pause';
         isPlaying = true;
-        playInterval = setInterval(() => {
+        btn.textContent = '⏸ Pause Playback';
+        playTimer = setInterval(() => {
             timeOffset = (timeOffset + 1) % 73;
             document.getElementById('twin-slider').value = timeOffset;
             updateTimeSlider(timeOffset);
-        }, 300);
+        }, 220);
     }
 }
 
-// Mouse events
-canvas.addEventListener('mousedown', e => {
-    dragging = true;
-    dragStartX = e.clientX - offsetX;
-    dragStartY = e.clientY - offsetY;
-});
-canvas.addEventListener('mousemove', e => {
-    if (dragging) {
-        offsetX = e.clientX - dragStartX;
-        offsetY = e.clientY - dragStartY;
-    }
-    // Tooltip
-    const rect = canvas.getBoundingClientRect();
-    const mx = (e.clientX - rect.left - offsetX) / zoom;
-    const my = (e.clientY - rect.top - offsetY) / zoom;
+function resetCamera() {
+    cameraX = 0;
+    cameraY = 0;
+    zoom = 1.0;
+}
 
-    const tooltip = document.getElementById('twin-tooltip');
-    let found = false;
-    landmarks.forEach(lm => {
-        const dx = mx - lm.x * W;
-        const dy = my - lm.y * H;
-        if (Math.sqrt(dx*dx + dy*dy) < 20) {
-            tooltip.style.display = 'block';
-            tooltip.style.left = (e.clientX + 15) + 'px';
-            tooltip.style.top = (e.clientY - 10) + 'px';
-            tooltip.textContent = `${lm.name} — ${lm.type}`;
-            found = true;
-        }
-    });
-    if (!found) tooltip.style.display = 'none';
+// Mouse Drag & Zoom Controls
+canvas.addEventListener('mousedown', e => {
+    isDragging = true;
+    startX = e.clientX - cameraX;
+    startY = e.clientY - cameraY;
 });
-canvas.addEventListener('mouseup', () => dragging = false);
+
+window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    cameraX = e.clientX - startX;
+    cameraY = e.clientY - startY;
+});
+
+window.addEventListener('mouseup', () => { isDragging = false; });
+
 canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    zoom *= e.deltaY < 0 ? 1.05 : 0.95;
-    zoom = Math.min(Math.max(zoom, 0.5), 3);
+    const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+    zoom = Math.max(0.6, Math.min(2.5, zoom * zoomFactor));
 });
 
-// Init
+// Tooltip on Hover
+canvas.addEventListener('mousemove', e => {
+    if (isDragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left - (W/2 + cameraX)) / zoom;
+    const mouseY = (e.clientY - rect.top - (H/2 + cameraY)) / zoom;
+
+    const tooltip = document.getElementById('twin-tooltip');
+    let hovered = null;
+
+    landmarks.forEach(lm => {
+        const pt = toIso(lm.gridX, lm.gridY, lm.height / 2);
+        const dist = Math.hypot(mouseX - pt.x, mouseY - pt.y);
+        if (dist < 32) hovered = lm;
+    });
+
+    if (hovered) {
+        const aqi = Math.round(getAQI(timeOffset));
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top = (e.clientY - 20) + 'px';
+        tooltip.innerHTML = `
+            <div style="font-weight:700; color:var(--accent-cyan); font-size:13px;">${hovered.name}</div>
+            <div style="color:var(--text-secondary); margin-top:2px;">Type: <b>${hovered.type.toUpperCase()}</b></div>
+            <div style="color:#00ff88; margin-top:2px;">Simulated AQI: <b>${aqi}</b></div>
+        `;
+    } else {
+        tooltip.style.display = 'none';
+    }
+});
+
 window.addEventListener('resize', resize);
 resize();
 render();

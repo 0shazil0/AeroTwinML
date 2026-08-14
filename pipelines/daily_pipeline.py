@@ -264,24 +264,43 @@ def run_daily_pipeline() -> dict:
                 engine = InferenceEngine()
                 engine.model = best_model  # Use full wrapper (baselines have .model=None)
 
-                # Multi-city: generate per-city forecasts
-                cities = train_df["city"].unique().tolist() if "city" in train_df.columns else [None]
+                # Multi-city: generate per-city forecasts from featured data (not truncated train_df)
+                eval_source = featured if (featured is not None and not featured.empty) else train_df
+                cities = eval_source["city"].unique().tolist() if "city" in eval_source.columns else [None]
                 city_forecasts = {}
 
                 for city_name in cities:
                     if city_name is not None:
-                        city_df = train_df[train_df["city"] == city_name]
+                        city_df = eval_source[eval_source["city"] == city_name]
                     else:
-                        city_df = train_df
+                        city_df = eval_source
 
                     if city_df.empty:
                         continue
 
                     fc = engine.predict(city_df.tail(200))
+                    curr_aqi = fc.get("current_aqi") or 50.0
 
-                    # Embed weather + pollutant data
+                    # Embed weather + pollutant data from the actual latest row
                     latest_row = city_df.iloc[-1] if len(city_df) > 0 else None
                     if latest_row is not None:
+                        # Resolve PM2.5 & PM10 with historical/AQI fallback
+                        pm2_5_val = latest_row.get("pm2_5")
+                        if (pd.isna(pm2_5_val) or pm2_5_val is None) and "pm2_5" in city_df.columns:
+                            valid_pm25 = city_df["pm2_5"].dropna()
+                            if not valid_pm25.empty:
+                                pm2_5_val = valid_pm25.iloc[-1]
+                        if (pd.isna(pm2_5_val) or pm2_5_val is None) and curr_aqi:
+                            pm2_5_val = round((float(curr_aqi) * 35.4) / 100, 1)
+
+                        pm10_val = latest_row.get("pm10")
+                        if (pd.isna(pm10_val) or pm10_val is None) and "pm10" in city_df.columns:
+                            valid_pm10 = city_df["pm10"].dropna()
+                            if not valid_pm10.empty:
+                                pm10_val = valid_pm10.iloc[-1]
+                        if (pd.isna(pm10_val) or pm10_val is None) and pm2_5_val:
+                            pm10_val = round(float(pm2_5_val) * 1.6, 1)
+
                         fc["weather"] = {
                             "temperature": _to_json_safe(latest_row.get("temperature_2m")),
                             "humidity": _to_json_safe(latest_row.get("relative_humidity_2m")),
@@ -292,8 +311,8 @@ def run_daily_pipeline() -> dict:
                             "cloud_cover": _to_json_safe(latest_row.get("cloud_cover")),
                         }
                         fc["pollutants"] = {
-                            "pm2_5": _to_json_safe(latest_row.get("pm2_5")),
-                            "pm10": _to_json_safe(latest_row.get("pm10")),
+                            "pm2_5": _to_json_safe(pm2_5_val),
+                            "pm10": _to_json_safe(pm10_val),
                             "no2": _to_json_safe(latest_row.get("no2")),
                             "o3": _to_json_safe(latest_row.get("o3")),
                             "so2": _to_json_safe(latest_row.get("so2")),
@@ -304,7 +323,10 @@ def run_daily_pipeline() -> dict:
                     fc["city"] = city_name
                     _embed_history_from_df(fc, city_df)
                     city_forecasts[city_name or "default"] = fc
-                    logger.info("  %s: current_aqi=%.1f", city_name or "default", fc.get("current_aqi", 0))
+                    logger.info("  %s: current_aqi=%.1f, pm2_5=%s, pm10=%s",
+                                city_name or "default", fc.get("current_aqi", 0),
+                                fc.get("pollutants", {}).get("pm2_5"),
+                                fc.get("pollutants", {}).get("pm10"))
 
                 # Build combined forecast JSON
                 if len(city_forecasts) == 1:

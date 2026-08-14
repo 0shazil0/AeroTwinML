@@ -101,6 +101,8 @@ def write_feature_group(
 
     if primary_key is None:
         primary_key = ["timestamp", "source"] if "source" in df.columns else ["timestamp"]
+    if "city" in df.columns and "city" not in primary_key:
+        primary_key = list(primary_key) + ["city"]
 
     try:
         try:
@@ -121,12 +123,22 @@ def write_feature_group(
                 raise ValueError("create_feature_group returned None")
 
         if fg is not None:
-            fg.insert(df)
+            # On free tier, avoid blocking synchronously on Spark materialization
+            # which times out after 10-20 min with EOF socket errors
+            try:
+                fg.insert(df, write_options={"wait_for_job": False})
+            except Exception:
+                try:
+                    fg.insert(df, wait_for_job=False)
+                except Exception as insert_err:
+                    logger.warning("Async insert fallback: %s — trying standard insert", insert_err)
+                    fg.insert(df)
             logger.info("Wrote %d rows to Hopsworks FG: %s v%d", len(df), name, version)
+            _save_local_fallback(name, df)
             return True
         return False
     except Exception as e:
-        logger.error("Feature group write failed: %s", e)
+        logger.error("Feature group write failed: %s — saved locally as fallback", e)
         _save_local_fallback(name, df)
         return False
 
