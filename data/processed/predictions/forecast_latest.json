@@ -16,7 +16,7 @@
       "alert": false
     }
   },
-  "timestamp": "2026-08-21T22:11:20.850554",
+  "timestamp": "2026-08-21T23:12:15.314322",
   "current_aqi": 80.0,
   "model_info": {
     "type": "per_horizon",
@@ -2083,7 +2083,7 @@
           "alert": false
         }
       },
-      "timestamp": "2026-08-21T22:11:20.850554",
+      "timestamp": "2026-08-21T23:12:15.314322",
       "current_aqi": 80.0,
       "model_info": {
         "type": "per_horizon",
@@ -4150,7 +4150,7 @@
           "alert": false
         }
       },
-      "timestamp": "2026-08-21T22:11:20.875969",
+      "timestamp": "2026-08-21T23:12:15.332711",
       "current_aqi": 75.0,
       "model_info": {
         "type": "per_horizon",
