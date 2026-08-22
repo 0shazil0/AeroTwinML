@@ -1,19 +1,19 @@
 {
   "pipeline": "hourly",
-  "started_at": "2026-08-22T09:20:16.127978+05:00",
+  "started_at": "2026-08-22T10:16:12.004425+05:00",
   "steps": {
     "ingestion": {
       "status": "ok",
-      "rows_fetched": 192
+      "rows_fetched": 96
     },
     "features": {
       "status": "ok",
       "features_generated": 70,
-      "rows": 192
+      "rows": 96
     },
     "inference": {
       "status": "ok",
-      "current_aqi": 15.0,
+      "current_aqi": 0.0,
       "forecast_24h": 58.9,
       "model_type": "per_horizon"
     },
@@ -28,5 +28,5 @@
   },
   "success": true,
   "backend": "local",
-  "completed_at": "2026-08-22T09:20:26.579234+05:00"
+  "completed_at": "2026-08-22T10:16:49.581809+05:00"
 }
