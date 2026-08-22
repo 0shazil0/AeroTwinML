@@ -1,15 +1,15 @@
 {
   "pipeline": "hourly",
-  "started_at": "2026-08-22T10:16:12.004425+05:00",
+  "started_at": "2026-08-22T11:17:56.774272+05:00",
   "steps": {
     "ingestion": {
       "status": "ok",
-      "rows_fetched": 96
+      "rows_fetched": 192
     },
     "features": {
       "status": "ok",
       "features_generated": 70,
-      "rows": 96
+      "rows": 192
     },
     "inference": {
       "status": "ok",
@@ -28,5 +28,5 @@
   },
   "success": true,
   "backend": "local",
-  "completed_at": "2026-08-22T10:16:49.581809+05:00"
+  "completed_at": "2026-08-22T11:18:05.744135+05:00"
 }
