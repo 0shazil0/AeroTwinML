@@ -1,6 +1,6 @@
 {
   "pipeline": "hourly",
-  "started_at": "2026-08-26T12:35:45.044348+05:00",
+  "started_at": "2026-08-26T13:27:51.227867+05:00",
   "steps": {
     "ingestion": {
       "status": "ok",
@@ -28,5 +28,5 @@
   },
   "success": true,
   "backend": "local",
-  "completed_at": "2026-08-26T12:35:55.393081+05:00"
+  "completed_at": "2026-08-26T13:28:00.958273+05:00"
 }
