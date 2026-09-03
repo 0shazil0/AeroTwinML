@@ -1,6 +1,6 @@
 {
   "pipeline": "hourly",
-  "started_at": "2026-09-03T20:20:04.826068+05:00",
+  "started_at": "2026-09-03T23:56:57.625850+05:00",
   "steps": {
     "ingestion": {
       "status": "ok",
@@ -13,8 +13,8 @@
     },
     "inference": {
       "status": "ok",
-      "current_aqi": 72.0,
-      "forecast_24h": 62.1,
+      "current_aqi": 65.0,
+      "forecast_24h": 60.2,
       "model_type": "per_horizon"
     },
     "alerts": {
@@ -28,5 +28,5 @@
   },
   "success": true,
   "backend": "local",
-  "completed_at": "2026-09-03T20:20:15.896821+05:00"
+  "completed_at": "2026-09-03T23:57:06.339843+05:00"
 }
