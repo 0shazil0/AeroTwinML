@@ -1,11 +1,11 @@
 {
   "pipeline": "daily",
-  "started_at": "2026-09-10T12:05:37.513998+05:00",
+  "started_at": "2026-09-11T12:04:52.367848+05:00",
   "steps": {
     "backfill": {
       "status": "ok",
       "rows": 35088,
-      "range": "2024-09-09 \u2192 2026-09-09",
+      "range": "2024-09-10 \u2192 2026-09-10",
       "observed_labels": "10142"
     },
     "features": {
@@ -16,21 +16,21 @@
     },
     "training": {
       "status": "ok",
-      "best_model": "lightgbm",
+      "best_model": "xgboost",
       "best_horizon": "24h",
       "models_trained": 21,
       "per_horizon": {
         "24h": {
-          "model": "lightgbm",
-          "rmse": 25.55
+          "model": "xgboost",
+          "rmse": 24.765
         },
         "48h": {
           "model": "lightgbm",
-          "rmse": 27.743
+          "rmse": 26.965
         },
         "72h": {
           "model": "random_forest",
-          "rmse": 28.294
+          "rmse": 27.099
         }
       }
     },
@@ -42,5 +42,5 @@
   },
   "success": true,
   "backend": "hopsworks",
-  "completed_at": "2026-09-10T12:18:53.980661+05:00"
+  "completed_at": "2026-09-11T12:22:19.675398+05:00"
 }
