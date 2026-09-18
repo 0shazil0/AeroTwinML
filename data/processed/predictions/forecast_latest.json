@@ -16,8 +16,8 @@
       "alert": false
     }
   },
-  "timestamp": "2026-09-18T01:47:35.769903",
-  "current_aqi": 111.0,
+  "timestamp": "2026-09-18T06:46:52.060703",
+  "current_aqi": 85.0,
   "model_info": {
     "type": "per_horizon",
     "features_used": 49,
@@ -37,8 +37,8 @@
     "cloud_cover": 1.0
   },
   "pollutants": {
-    "pm2_5": 111.0,
-    "pm10": 42.0,
+    "pm2_5": 85.0,
+    "pm10": 26.0,
     "no2": null,
     "o3": null,
     "so2": null,
@@ -69,9 +69,9 @@
     },
     {
       "timestamp": "2026-09-18T01:00:00+00:00",
-      "aqi": 111.0,
-      "pm2_5": 111.0,
-      "pm10": 42.0,
+      "aqi": 73.0,
+      "pm2_5": 25.8,
+      "pm10": 41.3,
       "no2": null,
       "o3": null,
       "so2": null,
@@ -84,7 +84,7 @@
       "precipitation": 0.0,
       "cloud_cover": 1.0,
       "om_forecast_aqi": 73.0,
-      "dominant_pollutant": "pm25",
+      "dominant_pollutant": null,
       "temperature": 27.5,
       "humidity": 84.0
     },
@@ -174,9 +174,9 @@
     },
     {
       "timestamp": "2026-09-18T06:00:00+00:00",
-      "aqi": 73.0,
-      "pm2_5": 25.8,
-      "pm10": 41.3,
+      "aqi": 85.0,
+      "pm2_5": 85.0,
+      "pm10": 26.0,
       "no2": null,
       "o3": null,
       "so2": null,
@@ -189,7 +189,7 @@
       "precipitation": 0.0,
       "cloud_cover": 2.0,
       "om_forecast_aqi": 73.0,
-      "dominant_pollutant": null,
+      "dominant_pollutant": "pm25",
       "temperature": 26.1,
       "humidity": 89.0
     },
@@ -2083,8 +2083,8 @@
           "alert": false
         }
       },
-      "timestamp": "2026-09-18T01:47:35.769903",
-      "current_aqi": 111.0,
+      "timestamp": "2026-09-18T06:46:52.060703",
+      "current_aqi": 85.0,
       "model_info": {
         "type": "per_horizon",
         "features_used": 49,
@@ -2104,8 +2104,8 @@
         "cloud_cover": 1.0
       },
       "pollutants": {
-        "pm2_5": 111.0,
-        "pm10": 42.0,
+        "pm2_5": 85.0,
+        "pm10": 26.0,
         "no2": null,
         "o3": null,
         "so2": null,
@@ -2136,9 +2136,9 @@
         },
         {
           "timestamp": "2026-09-18T01:00:00+00:00",
-          "aqi": 111.0,
-          "pm2_5": 111.0,
-          "pm10": 42.0,
+          "aqi": 73.0,
+          "pm2_5": 25.8,
+          "pm10": 41.3,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -2151,7 +2151,7 @@
           "precipitation": 0.0,
           "cloud_cover": 1.0,
           "om_forecast_aqi": 73.0,
-          "dominant_pollutant": "pm25",
+          "dominant_pollutant": null,
           "temperature": 27.5,
           "humidity": 84.0
         },
@@ -2241,9 +2241,9 @@
         },
         {
           "timestamp": "2026-09-18T06:00:00+00:00",
-          "aqi": 73.0,
-          "pm2_5": 25.8,
-          "pm10": 41.3,
+          "aqi": 85.0,
+          "pm2_5": 85.0,
+          "pm10": 26.0,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -2256,7 +2256,7 @@
           "precipitation": 0.0,
           "cloud_cover": 2.0,
           "om_forecast_aqi": 73.0,
-          "dominant_pollutant": null,
+          "dominant_pollutant": "pm25",
           "temperature": 26.1,
           "humidity": 89.0
         },
@@ -4150,8 +4150,8 @@
           "alert": false
         }
       },
-      "timestamp": "2026-09-18T01:47:35.832954",
-      "current_aqi": 87.0,
+      "timestamp": "2026-09-18T06:46:52.099100",
+      "current_aqi": 108.0,
       "model_info": {
         "type": "per_horizon",
         "features_used": 49,
@@ -4171,8 +4171,8 @@
         "cloud_cover": 1.0
       },
       "pollutants": {
-        "pm2_5": 87.0,
-        "pm10": 28.0,
+        "pm2_5": 108.0,
+        "pm10": 41.0,
         "no2": null,
         "o3": null,
         "so2": null,
@@ -4203,9 +4203,9 @@
         },
         {
           "timestamp": "2026-09-18T01:00:00+00:00",
-          "aqi": 87.0,
-          "pm2_5": 87.0,
-          "pm10": 28.0,
+          "aqi": 74.0,
+          "pm2_5": 26.2,
+          "pm10": 41.9,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -4218,7 +4218,7 @@
           "precipitation": 0.0,
           "cloud_cover": 20.0,
           "om_forecast_aqi": 74.0,
-          "dominant_pollutant": "pm25",
+          "dominant_pollutant": null,
           "temperature": 27.1,
           "humidity": 90.0
         },
@@ -4308,9 +4308,9 @@
         },
         {
           "timestamp": "2026-09-18T06:00:00+00:00",
-          "aqi": 74.0,
-          "pm2_5": 26.2,
-          "pm10": 41.9,
+          "aqi": 108.0,
+          "pm2_5": 108.0,
+          "pm10": 41.0,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -4323,7 +4323,7 @@
           "precipitation": 0.0,
           "cloud_cover": 19.0,
           "om_forecast_aqi": 74.0,
-          "dominant_pollutant": null,
+          "dominant_pollutant": "pm25",
           "temperature": 26.8,
           "humidity": 89.0
         },
