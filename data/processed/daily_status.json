@@ -1,36 +1,36 @@
 {
   "pipeline": "daily",
-  "started_at": "2026-10-24T11:56:41.079293+05:00",
+  "started_at": "2026-10-25T12:21:33.475396+05:00",
   "steps": {
     "backfill": {
       "status": "ok",
       "rows": 35088,
-      "range": "2024-10-23 \u2192 2026-10-23",
-      "observed_labels": "11446"
+      "range": "2024-10-24 \u2192 2026-10-24",
+      "observed_labels": "11468"
     },
     "features": {
       "status": "ok",
       "total_rows": 35088,
-      "train_rows": 11446,
+      "train_rows": 11468,
       "features": 53
     },
     "training": {
       "status": "ok",
-      "best_model": "ridge",
-      "best_horizon": "48h",
+      "best_model": "lightgbm",
+      "best_horizon": "72h",
       "models_trained": 21,
       "per_horizon": {
         "24h": {
-          "model": "xgboost",
-          "rmse": 49.912
+          "model": "lightgbm",
+          "rmse": 49.099
         },
         "48h": {
           "model": "ridge",
-          "rmse": 43.286
+          "rmse": 36.413
         },
         "72h": {
-          "model": "gradient_boosting",
-          "rmse": 51.224
+          "model": "lightgbm",
+          "rmse": 34.782
         }
       }
     },
@@ -42,5 +42,5 @@
   },
   "success": true,
   "backend": "hopsworks",
-  "completed_at": "2026-10-24T12:05:50.538149+05:00"
+  "completed_at": "2026-10-25T12:30:27.025218+05:00"
 }
