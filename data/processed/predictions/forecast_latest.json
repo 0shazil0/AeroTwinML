@@ -16,7 +16,7 @@
       "alert": false
     }
   },
-  "timestamp": "2026-10-27T12:49:28.584177",
+  "timestamp": "2026-10-27T18:25:50.159820",
   "current_aqi": 92.0,
   "model_info": {
     "type": "per_horizon",
@@ -2083,7 +2083,7 @@
           "alert": false
         }
       },
-      "timestamp": "2026-10-27T12:49:28.584177",
+      "timestamp": "2026-10-27T18:25:50.159820",
       "current_aqi": 92.0,
       "model_info": {
         "type": "per_horizon",
@@ -4150,8 +4150,8 @@
           "alert": false
         }
       },
-      "timestamp": "2026-10-27T12:49:28.670030",
-      "current_aqi": 131.0,
+      "timestamp": "2026-10-27T18:25:50.225611",
+      "current_aqi": 231.0,
       "model_info": {
         "type": "per_horizon",
         "features_used": 49,
@@ -4171,8 +4171,8 @@
         "cloud_cover": 0.0
       },
       "pollutants": {
-        "pm2_5": 131.0,
-        "pm10": 52.0,
+        "pm2_5": 231.0,
+        "pm10": 116.0,
         "no2": null,
         "o3": null,
         "so2": null,
@@ -4434,9 +4434,9 @@
         },
         {
           "timestamp": "2026-10-27T12:00:00+00:00",
-          "aqi": 131.0,
-          "pm2_5": 131.0,
-          "pm10": 52.0,
+          "aqi": 96.0,
+          "pm2_5": 34.0,
+          "pm10": 54.4,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -4449,7 +4449,7 @@
           "precipitation": 0.0,
           "cloud_cover": 0.0,
           "om_forecast_aqi": 96.0,
-          "dominant_pollutant": "pm25",
+          "dominant_pollutant": null,
           "temperature": 36.2,
           "humidity": 15.0
         },
@@ -4560,9 +4560,9 @@
         },
         {
           "timestamp": "2026-10-27T18:00:00+00:00",
-          "aqi": 94.0,
-          "pm2_5": 33.3,
-          "pm10": 53.3,
+          "aqi": 231.0,
+          "pm2_5": 231.0,
+          "pm10": 116.0,
           "no2": null,
           "o3": null,
           "so2": null,
@@ -4575,7 +4575,7 @@
           "precipitation": 0.0,
           "cloud_cover": 0.0,
           "om_forecast_aqi": 94.0,
-          "dominant_pollutant": null,
+          "dominant_pollutant": "pm25",
           "temperature": 32.3,
           "humidity": 41.0
         },
