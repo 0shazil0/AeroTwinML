@@ -1,6 +1,6 @@
 {
   "pipeline": "hourly",
-  "started_at": "2026-11-23T13:21:55.164035+05:00",
+  "started_at": "2026-11-24T01:39:06.748749+05:00",
   "steps": {
     "ingestion": {
       "status": "ok",
@@ -13,13 +13,21 @@
     },
     "inference": {
       "status": "ok",
-      "current_aqi": 121.0,
-      "forecast_24h": 171.6,
+      "current_aqi": 97.0,
+      "forecast_24h": 158.3,
       "model_type": "per_horizon"
     },
     "alerts": {
-      "status": "ok",
-      "alerts": []
+      "status": "triggered",
+      "alerts": [
+        {
+          "type": "forecast_48h",
+          "aqi": 252.4,
+          "category": "Very Unhealthy",
+          "horizon": "48h",
+          "timestamp": "2026-11-23T20:39:15.707428"
+        }
+      ]
     },
     "quality": {
       "status": "ok",
@@ -28,5 +36,5 @@
   },
   "success": true,
   "backend": "local",
-  "completed_at": "2026-11-23T13:22:04.793944+05:00"
+  "completed_at": "2026-11-24T01:39:15.862020+05:00"
 }
